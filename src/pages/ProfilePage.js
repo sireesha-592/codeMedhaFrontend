@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
 
-const API = 'http://localhost:5000';
+const API = 'https://codemedha-production.up.railway.app';
 
 const BADGES = [
   { id: 'first_class',    icon: '🎓', label: 'First Class',    desc: 'Watched your first class',     color: '#7c6af5' },
