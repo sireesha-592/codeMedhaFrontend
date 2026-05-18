@@ -579,6 +579,7 @@ export default function AdminPanel() {
   const secAnsweredCount = (sub, secKey) => (sub[secKey]?.answers || []).filter(a => a.isAnswered).length;
 
   const adminTabs = [
+    { key: 'dashboard',   label: '🏠 Dashboard'   },
     { key: 'questions',   label: '📝 Questions'   },
     { key: 'submissions', label: '📬 Submissions'  },
     { key: 'attendance',  label: '📋 Attendance'   },
@@ -645,7 +646,7 @@ export default function AdminPanel() {
       </div>
 
       {/* ── DEADLINE PICKER ────────────────────────────────────── */}
-      {tab === 'questions' && (
+      {tab === 'dashboard' ? <AdminDashboard token={token} T={T} /> : tab === 'questions' && (
         <div style={{ background: '#fff8e1', border: '1.5px solid #ffe082', borderRadius: 10, padding: '14px 18px', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#b8860b' }}>⏰ Assignment Deadline</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 240 }}>
