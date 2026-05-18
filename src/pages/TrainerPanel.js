@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../api';
 import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
+import Navbar from '../components/Navbar';
 import { useTheme } from '../context/ThemeContext';
 
 const API      = process.env.REACT_APP_API_URL || '/api';
@@ -96,7 +97,8 @@ export default function TrainerPanel() {
   ];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: C.bg, fontFamily: "'Inter','Segoe UI',sans-serif", color: C.text }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: C.bg, fontFamily: "'Inter','Segoe UI',sans-serif", color: C.text, paddingTop: 56 }}>
+      <Navbar />
 
       {/* ── Sidebar ── */}
       <aside style={{
