@@ -728,7 +728,7 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      <div style={{ ...S.topRow, background: T.card, border: `1px solid ${T.border}` }}>
+      <div style={{ ...S.topRow, background: T.card, border: `1px solid ${T.border}`, display: tab === 'dashboard' ? 'none' : 'flex' }}>
         <div style={S.field}><label style={{ ...S.label, color: T.textMuted }}>Course ID</label>
           <input style={{ ...S.input, background: T.input, borderColor: T.inputBorder, color: T.text, background: T.input, borderColor: T.inputBorder, color: T.text }} placeholder="Paste course ID here" value={courseId} onChange={e => setCourseId(e.target.value)} /></div>
         <div style={S.field}><label style={{ ...S.label, color: T.textMuted }}>Date</label>
