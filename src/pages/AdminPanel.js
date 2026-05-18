@@ -102,6 +102,46 @@ function CodeAnswerInline({ questionId, date, traineeId, token }) {
 // ════════════════════════════════════════════════════════════
 //  ADMIN PANEL
 // ════════════════════════════════════════════════════════════
+
+function AdminDashboard({ token, T }) {
+  const [stats, setStats] = React.useState({ students:0, trainers:0, onlineNow:0, submissionsToday:0 });
+  React.useEffect(() => {
+    const h = { Authorization: 'Bearer '+token };
+    Promise.allSettled([
+      fetch('/api/users/all', {headers:h}).then(r=>r.json()),
+      fetch('/api/sessions/online-count', {headers:h}).then(r=>r.json()),
+    ]).then(([users, online]) => {
+      const u = users.status==='fulfilled' && Array.isArray(users.value) ? users.value : [];
+      setStats({
+        students: u.filter(x=>x.role==='student').length,
+        trainers: u.filter(x=>x.role==='trainer'||x.role==='teacher').length,
+        onlineNow: online.status==='fulfilled' ? (online.value?.count||0) : 0,
+        submissionsToday: 0,
+      });
+    });
+  }, [token]);
+  const cards = [
+    { icon:'👥', label:'Total Students',    value:stats.students,    color:'#6366f1' },
+    { icon:'👨‍💻', label:'Total Trainers',    value:stats.trainers,    color:'#8b5cf6' },
+    { icon:'🟢', label:'Online Now',        value:stats.onlineNow,   color:'#10b981' },
+    { icon:'📝', label:'Submissions Today', value:stats.submissionsToday, color:'#f59e0b' },
+  ];
+  return (
+    <div style={{padding:8}}>
+      <h2 style={{color:T.text,fontWeight:800,fontSize:22,marginBottom:24}}>🏠 Dashboard Overview</h2>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:20}}>
+        {cards.map(card=>(
+          <div key={card.label} style={{background:T.card,border:'1px solid '+T.border,borderRadius:16,padding:24,display:'flex',flexDirection:'column',gap:8}}>
+            <div style={{fontSize:32}}>{card.icon}</div>
+            <div style={{fontSize:28,fontWeight:800,color:card.color}}>{card.value}</div>
+            <div style={{fontSize:13,color:T.muted,fontWeight:600}}>{card.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   const { token, user } = useAuth();
   const { isDark, toggleTheme } = useTheme();
