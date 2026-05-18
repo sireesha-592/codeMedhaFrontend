@@ -2024,7 +2024,7 @@ function AdminGroupChat({ user, token }) {
 //  STYLES
 // ════════════════════════════════════════════════════════════
 const S = {
-  appWrapper:    { display: 'flex', minHeight: '100vh', fontFamily: "'DM Sans','Segoe UI',sans-serif" },
+  appWrapper:    { display: 'flex', minHeight: '100vh', fontFamily: "'DM Sans','Segoe UI',sans-serif", paddingTop: 56 },
   sidebar:       { width: 230, display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 },
   sidebarHeader: { display: 'flex', alignItems: 'center', gap: 12, padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: 8 },
   sidebarName:   { color: '#fff', fontWeight: 700, fontSize: 14 },
