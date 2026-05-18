@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const isElectron = window.location.protocol === 'file:';
+export const API_BASE = 'https://codemedha-production.up.railway.app';
 
 export const API_BASE = isElectron
   ? 'http://localhost:5000'
