@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
+import Navbar from '../components/Navbar';
 
 const API = process.env.REACT_APP_API_URL || "";
 const Dashboard = () => {
@@ -210,7 +211,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div style={s.page}>
+    <div style={{...s.page, paddingTop: 56}}>
+      <Navbar />
       <aside style={s.sidebar}>
         <div style={s.sidebarLogo}>
           <div style={s.logoIcon}>⚡</div>
