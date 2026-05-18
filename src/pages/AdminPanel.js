@@ -108,7 +108,7 @@ function AdminDashboard({ token, T }) {
   React.useEffect(() => {
     const h = { Authorization: 'Bearer '+token };
     Promise.allSettled([
-      fetch('/api/trainer/students', {headers:h}).then(r=>r.json()),
+      fetch('/api/auth/all-users', {headers:h}).then(r=>r.json()),
       fetch('/api/sessions/online-count', {headers:h}).then(r=>r.json()),
     ]).then(([users, online]) => {
       const u = users.status==='fulfilled' && Array.isArray(users.value) ? users.value : [];
