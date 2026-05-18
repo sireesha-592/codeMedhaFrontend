@@ -110,7 +110,7 @@ function AdminDashboard({ token, T, user }) {
 
   React.useEffect(() => {
     const h = { Authorization: 'Bearer '+token };
-    fetch('/api/auth/admin-stats', {headers:h})
+    fetch('https://codemedha-production.up.railway.app/api/auth/admin-stats', {headers:h})
       .then(r=>r.json())
       .then(d => setStats({ students: d.students||0, trainers: d.trainers||0, onlineNow: d.onlineNow||0 }))
       .catch(()=>{});
@@ -687,9 +687,7 @@ export default function AdminPanel() {
       <Navbar />
       {/* ── SIDEBAR ─────────────────────────────────────────── */}
       <aside style={{ ...S.sidebar, background: T.sidebar }}>
-        git add src/pages/AdminPanel.js
-git commit -m "Remove duplicate admin profile from sidebar"
-git push origin sirisha
+        
         <nav style={{ flex: 1, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
           {adminTabs.map(t => (
             <button
