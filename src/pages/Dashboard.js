@@ -214,7 +214,7 @@ const Dashboard = () => {
       <aside style={s.sidebar}>
         <div style={s.sidebarLogo}>
           <div style={s.logoIcon}>⚡</div>
-          <span style={s.logoText}>LMS Pro</span>
+          <span style={s.logoText}>CodeMedha</span>
         </div>
         <nav style={s.nav}>
           {[

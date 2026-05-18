@@ -52,7 +52,7 @@ const LeaderboardPage = () => {
     <aside style={{ width: 220, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', padding: '24px 0', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px 28px' }}>
         <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⚡</div>
-        <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>LMS Pro</span>
+        <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>CodeMedha</span>
       </div>
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
         {[

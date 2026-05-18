@@ -31,7 +31,7 @@ export default function Attendance() {
       <aside style={{ ...styles.sidebar, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}` }}>
         <div style={styles.sidebarLogo}>
           <div style={styles.logoIcon}>⚡</div>
-          <span style={{ ...styles.logoText, color: theme.textPrimary }}>LMS Pro</span>
+          <span style={{ ...styles.logoText, color: theme.textPrimary }}>CodeMedha</span>
         </div>
 
         <nav style={styles.nav}>

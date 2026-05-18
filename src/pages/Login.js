@@ -54,7 +54,7 @@ export default function Login({ role = 'student' }) {
     <div style={{ ...styles.container, background: c.grad }}>
       <div style={styles.card}>
         <div style={{ ...styles.logo, background: c.accent }}>⚡</div>
-        <h2 style={styles.title}>LMS Pro</h2>
+        <h2 style={styles.title}>CodeMedha</h2>
         <p style={{ ...styles.sub, color: c.accent }}>{c.label}</p>
 
         {error && <p style={styles.error}>{error}</p>}

@@ -156,7 +156,7 @@ const AnalyticsPage = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
-      doc.text('LMS Pro — Progress Report', W / 2, 18, { align: 'center' });
+      doc.text('CodeMedha — Progress Report', W / 2, 18, { align: 'center' });
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.text(`${user?.name || 'Student'}  |  Generated: ${now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}`, W / 2, 28, { align: 'center' });
@@ -295,7 +295,7 @@ const AnalyticsPage = () => {
       doc.rect(0, 277, W, 20, 'F');
       doc.setTextColor(140, 140, 160);
       doc.setFontSize(8);
-      doc.text('LMS Pro — Confidential Student Report', W / 2, 287, { align: 'center' });
+      doc.text('CodeMedha — Confidential Student Report', W / 2, 287, { align: 'center' });
       doc.text(`Page 1 of 1`, W - 15, 287, { align: 'right' });
 
       const filename = `LMS_Report_${user?.name?.replace(/ /g,'_') || 'Student'}_${now.toISOString().split('T')[0]}.pdf`;
@@ -314,7 +314,7 @@ const AnalyticsPage = () => {
     <aside style={{ width: 220, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', padding: '24px 0', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px 28px' }}>
         <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⚡</div>
-        <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>LMS Pro</span>
+        <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>CodeMedha</span>
       </div>
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
         {[

@@ -114,7 +114,7 @@ export default function TrainerPanel() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 18, fontWeight: 700,
             }}>⚡</div>
-            <span style={{ fontSize: 17, fontWeight: 700, color: C.text }}>LMS Pro</span>
+            <span style={{ fontSize: 17, fontWeight: 700, color: C.text }}>CodeMedha</span>
           </div>
 
           {/* Profile */}

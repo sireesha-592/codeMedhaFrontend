@@ -3,6 +3,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { io } from 'socket.io-client';
+import Navbar from '../components/Navbar';
 
 const API        = '';
 const SOCKET_URL = '';
@@ -591,6 +592,7 @@ export default function AdminPanel() {
 
   return (
     <div style={S.appWrapper}>
+      <Navbar />
       {/* ── SIDEBAR ─────────────────────────────────────────── */}
       <aside style={{ ...S.sidebar, background: T.sidebar }}>
         <div style={S.sidebarHeader}>
@@ -2030,7 +2032,7 @@ const S = {
   avatarCircle:  { width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,#ef4444,#f59e0b)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 18, flexShrink: 0 },
   navBtn:        { width: '100%', padding: '11px 14px 11px 20px', background: 'none', border: 'none', borderLeft: '3px solid transparent', color: 'rgba(255,255,255,0.5)', textAlign: 'left', cursor: 'pointer', fontSize: 13.5, transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 8 },
   navBtnActive:  { background: 'rgba(255,255,255,0.1)', color: '#fff', borderLeft: '3px solid #60a5fa' },
-  page:          { flex: 1, minHeight: '100vh', padding: 28, overflowY: 'auto' },
+  page:          { flex: 1, minHeight: '100vh', padding: 28, paddingTop: 84, overflowY: 'auto' },
   header:        { marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   title:         { fontSize: 22, fontWeight: 800, margin: 0 },
   sub:           { fontSize: 13, margin: '4px 0 0 0' },
