@@ -1,14 +1,10 @@
 import axios from 'axios';
 
-export const API_BASE = 'https://codemedha-production.up.railway.app';
-
-export const API_BASE = isElectron
-  ? 'http://localhost:5000'
-  : (process.env.REACT_APP_API_URL || 'https://codemedha-production.up.railway.app');
+export const API_BASE = 'https://codemedha-production-47c1.up.railway.app';
 
 const api = axios.create({
   baseURL: API_BASE,
-  withCredentials: true,
+  withCredentials: false,
   timeout: 15000,
 });
 
