@@ -687,13 +687,9 @@ export default function AdminPanel() {
       <Navbar />
       {/* ── SIDEBAR ─────────────────────────────────────────── */}
       <aside style={{ ...S.sidebar, background: T.sidebar }}>
-        <div style={S.sidebarHeader}>
-          <div style={S.avatarCircle}>{(user?.name || 'A')[0].toUpperCase()}</div>
-          <div>
-            <div style={S.sidebarName}>{user?.name || 'Admin'}</div>
-            <div style={S.sidebarRole}>👑 Admin</div>
-          </div>
-        </div>
+        git add src/pages/AdminPanel.js
+git commit -m "Remove duplicate admin profile from sidebar"
+git push origin sirisha
         <nav style={{ flex: 1, padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
           {adminTabs.map(t => (
             <button
