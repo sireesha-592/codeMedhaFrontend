@@ -103,40 +103,91 @@ function CodeAnswerInline({ questionId, date, traineeId, token }) {
 //  ADMIN PANEL
 // ════════════════════════════════════════════════════════════
 
-function AdminDashboard({ token, T }) {
-  const [stats, setStats] = React.useState({ students:0, trainers:0, onlineNow:0, submissionsToday:0 });
+function AdminDashboard({ token, T, user }) {
+  const [stats, setStats] = React.useState({ students:0, trainers:0, onlineNow:0 });
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? '🌅 Good Morning' : hour < 17 ? '☀️ Good Afternoon' : '🌙 Good Evening';
+
   React.useEffect(() => {
     const h = { Authorization: 'Bearer '+token };
-    Promise.allSettled([
-      fetch('/api/auth/all-users', {headers:h}).then(r=>r.json()),
-      fetch('/api/sessions/online-count', {headers:h}).then(r=>r.json()),
-    ]).then(([users, online]) => {
-      const u = users.status==='fulfilled' && Array.isArray(users.value) ? users.value : [];
-      setStats({
-        students: u.filter(x=>x.role==='student').length,
-        trainers: u.filter(x=>x.role==='trainer'||x.role==='teacher').length,
-        onlineNow: online.status==='fulfilled' ? (online.value?.count||0) : 0,
-        submissionsToday: 0,
-      });
-    });
+    fetch('/api/auth/admin-stats', {headers:h})
+      .then(r=>r.json())
+      .then(d => setStats({ students: d.students||0, trainers: d.trainers||0, onlineNow: d.onlineNow||0 }))
+      .catch(()=>{});
   }, [token]);
+
   const cards = [
-    { icon:'👥', label:'Total Students',    value:stats.students,    color:'#6366f1' },
-    { icon:'👨‍💻', label:'Total Trainers',    value:stats.trainers,    color:'#8b5cf6' },
-    { icon:'🟢', label:'Online Now',        value:stats.onlineNow,   color:'#10b981' },
-    { icon:'📝', label:'Submissions Today', value:stats.submissionsToday, color:'#f59e0b' },
+    { icon:'👥', label:'Total Students', value:stats.students, color:'#6366f1', bg:'#6366f120' },
+    { icon:'👨‍💻', label:'Total Trainers', value:stats.trainers, color:'#8b5cf6', bg:'#8b5cf620' },
+    { icon:'🟢', label:'Online Now', value:stats.onlineNow, color:'#10b981', bg:'#10b98120' },
   ];
+
   return (
     <div style={{padding:8}}>
-      <h2 style={{color:T.text,fontWeight:800,fontSize:22,marginBottom:24}}>🏠 Dashboard Overview</h2>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:20}}>
+      {/* Welcome Banner */}
+      <div style={{
+        background:'linear-gradient(135deg, #1e3a5f 0%, #0f2027 50%, #1a1a3e 100%)',
+        borderRadius:20, padding:'32px 36px', marginBottom:28,
+        border:'1px solid #2a2a5e', position:'relative', overflow:'hidden'
+      }}>
+        <div style={{position:'absolute',top:-40,right:-40,width:200,height:200,
+          borderRadius:'50%',background:'#6366f110'}}/>
+        <div style={{position:'absolute',bottom:-60,right:80,width:150,height:150,
+          borderRadius:'50%',background:'#8b5cf608'}}/>
+        <div style={{position:'relative',zIndex:1}}>
+          <div style={{fontSize:13,color:'#94a3b8',fontWeight:600,marginBottom:6,letterSpacing:'1px',textTransform:'uppercase'}}>
+            {greeting}
+          </div>
+          <h1 style={{fontSize:28,fontWeight:900,color:'#fff',margin:'0 0 8px',lineHeight:1.2}}>
+            Welcome back, <span style={{color:'#818cf8'}}>{user?.name || 'Admin'}</span> 👑
+          </h1>
+          <p style={{fontSize:14,color:'#64748b',margin:0}}>
+            Here's what's happening at CodeMedha today — {new Date().toLocaleDateString('en-IN',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}
+          </p>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:20,marginBottom:28}}>
         {cards.map(card=>(
-          <div key={card.label} style={{background:T.card,border:'1px solid '+T.border,borderRadius:16,padding:24,display:'flex',flexDirection:'column',gap:8}}>
-            <div style={{fontSize:32}}>{card.icon}</div>
-            <div style={{fontSize:28,fontWeight:800,color:card.color}}>{card.value}</div>
-            <div style={{fontSize:13,color:T.muted,fontWeight:600}}>{card.label}</div>
+          <div key={card.label} style={{
+            background:T.card, border:'1px solid '+T.border,
+            borderRadius:16, padding:24,
+            display:'flex', alignItems:'center', gap:16,
+            transition:'transform 0.2s'
+          }}>
+            <div style={{
+              width:56, height:56, borderRadius:14,
+              background:card.bg, display:'flex',
+              alignItems:'center', justifyContent:'center', fontSize:26
+            }}>{card.icon}</div>
+            <div>
+              <div style={{fontSize:30,fontWeight:900,color:card.color,lineHeight:1}}>{card.value}</div>
+              <div style={{fontSize:13,color:T.muted,fontWeight:600,marginTop:4}}>{card.label}</div>
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* Quick Actions */}
+      <div style={{background:T.card,border:'1px solid '+T.border,borderRadius:16,padding:24}}>
+        <h3 style={{color:T.text,fontWeight:800,fontSize:16,margin:'0 0 16px'}}>⚡ Quick Actions</h3>
+        <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+          {[
+            {label:'📝 Add Questions', color:'#6366f1'},
+            {label:'📋 View Attendance', color:'#10b981'},
+            {label:'📬 Check Submissions', color:'#f59e0b'},
+            {label:'📊 Reports', color:'#8b5cf6'},
+            {label:'🕐 Login Tracker', color:'#06b6d4'},
+          ].map(a=>(
+            <div key={a.label} style={{
+              padding:'10px 18px', borderRadius:10,
+              background:a.color+'20', color:a.color,
+              fontWeight:700, fontSize:13, cursor:'pointer',
+              border:'1px solid '+a.color+'40'
+            }}>{a.label}</div>
+          ))}
+        </div>
       </div>
     </div>
   );
