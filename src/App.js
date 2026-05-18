@@ -79,7 +79,7 @@ function InstallBanner() {
             Install LMS {cfg.label} App
           </div>
           <div style={{ fontSize: 12, opacity: 0.9 }}>
-            Phone/Laptop లో app లాగా use చేయండి
+            Use on Phone/Laptop as an App
           </div>
         </div>
       </div>
