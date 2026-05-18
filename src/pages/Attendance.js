@@ -15,10 +15,12 @@ export default function Attendance() {
     { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
     { icon: '📅', label: 'Attendance',    path: '/attendance',   active: true },
     { icon: '🎥', label: 'Classes',       path: '/courses' },
+    { icon: '📚', label: 'My Course',     path: '/my-course' },
     { icon: '📝', label: 'Assignments',   path: `/assignment/${todayDate}` },
+    { icon: '💬', label: 'Group Chat',    path: user?.enrolledCourse ? `/chat/${user.enrolledCourse}` : '/courses' },
     { icon: '🔔', label: 'Notifications', path: '/notifications' },
     { icon: '📊', label: 'Analytics',     path: '/analytics' },
-          { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
+    { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
     { icon: '👤', label: 'Profile',       path: '/profile' },
   ];
 

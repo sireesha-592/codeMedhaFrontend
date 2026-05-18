@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
+import { API_BASE as API } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import CodeEditor from '../components/CodeEditor';
 
 export default function AssignmentPage() {
   const { date } = useParams();
@@ -17,28 +19,43 @@ export default function AssignmentPage() {
   const [activeSection, setActiveSection] = useState('A');
   const [loading, setLoading]             = useState(true);
   const [saving, setSaving]               = useState(false);
+  const [savingQ, setSavingQ]             = useState({}); // per-question saving state
   const [submitted, setSubmitted]         = useState(false);
+  const [isEditing, setIsEditing]         = useState(false); // editing after submit
+  const [openEditors, setOpenEditors]     = useState({});
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
+
+  // deadlineDate: Date object — set from backend; null = not yet loaded
+  const [deadlineDate, setDeadlineDate]   = useState(null);
+
+  const toggleEditor = (qId) => setOpenEditors(prev => ({ ...prev, [qId]: !prev[qId] }));
 
   // ── Timer ──────────────────────────────────────────────────
-  const [timeLeft, setTimeLeft]     = useState('');
+  const [timeLeft, setTimeLeft]       = useState('');
   const [timerUrgent, setTimerUrgent] = useState(false);
-  const [msLeft, setMsLeft]         = useState(null);
+  const [msLeft, setMsLeft]           = useState(null);
 
   // ── Warning toasts ─────────────────────────────────────────
-  const [warnings, setWarnings]   = useState([]);
-  const firedWarnings             = useRef(new Set());
+  const [warnings, setWarnings] = useState([]);
+  const firedWarnings           = useRef(new Set());
+  const questionsRef            = useRef(null);
 
   const isToday = date === new Date().toISOString().split('T')[0];
 
-  // Timer tick
+  // Timer tick — uses admin-set deadline (falls back to midnight if none)
   useEffect(() => {
-    if (!isToday) return;
+    // deadlineDate null means not loaded yet; wait
+    if (!deadlineDate) return;
+
     const tick = () => {
-      const now      = new Date();
-      const midnight = new Date(); midnight.setHours(24, 0, 0, 0);
-      const diff = midnight - now;
+      const now  = new Date();
+      const diff = deadlineDate - now;
       setMsLeft(diff);
-      if (diff <= 0) { setTimeLeft('Time Up!'); return; }
+      if (diff <= 0) {
+        setTimeLeft('Time Up!');
+        setDeadlinePassed(true);
+        return;
+      }
       const h = Math.floor(diff / 3_600_000);
       const m = Math.floor((diff % 3_600_000) / 60_000);
       const s = Math.floor((diff % 60_000) / 1000);
@@ -48,7 +65,18 @@ export default function AssignmentPage() {
     tick();
     const t = setInterval(tick, 1000);
     return () => clearInterval(t);
-  }, [isToday]);
+  }, [deadlineDate]);
+
+  // For past dates, or if deadline already passed — read-only
+  useEffect(() => {
+    if (!isToday) {
+      setDeadlinePassed(true);
+    } else if (deadlineDate && deadlineDate <= new Date()) {
+      setDeadlinePassed(true);
+    }
+  }, [isToday, deadlineDate]);
+
+  const isPastDate = date < new Date().toISOString().split('T')[0];
 
   // Warning milestones
   useEffect(() => {
@@ -56,7 +84,7 @@ export default function AssignmentPage() {
     const milestones = [
       { ms: 60 * 60_000, key: '60min', level: 'info',    msg: '⏰ 1 hour left! Start wrapping up your assignment.' },
       { ms: 30 * 60_000, key: '30min', level: 'warning', msg: '⚠️ 30 minutes left! Submit soon to avoid auto-submit.' },
-      { ms: 10 * 60_000, key: '10min', level: 'danger',  msg: '🚨 10 minutes left! Assignment will AUTO-SUBMIT at midnight!' },
+      { ms: 10 * 60_000, key: '10min', level: 'danger',  msg: `🚨 10 minutes left! Assignment will AUTO-SUBMIT at ${deadlineDate ? deadlineDate.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) : 'deadline'}!` },
       { ms:  5 * 60_000, key: '5min',  level: 'danger',  msg: '🔴 Only 5 minutes! AUTO-SUBMIT is very close!' },
     ];
     milestones.forEach(({ ms, key, level, msg }) => {
@@ -76,15 +104,59 @@ export default function AssignmentPage() {
   const doAutoSubmit = useCallback(async () => {
     if (submitted) return;
     try {
-      await axios.patch('http://localhost:5000/api/submissions/submit',
+      await api.patch('http://localhost:5000/api/submissions/submit',
         { traineeId: user._id, date }, { headers });
       setSubmitted(true);
+      setIsEditing(false);
       const id = 'autosubmit-done';
-      setWarnings([{ id, level: 'info', msg: '✅ Assignment auto-submitted at midnight!' }]);
+      setWarnings([{ id, level: 'info', msg: `✅ Assignment auto-submitted at ${deadlineDate ? deadlineDate.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) : 'deadline'}!` }]);
     } catch (err) { console.error('Auto-submit error:', err); }
   }, [submitted]);
 
+  const handleSectionChange = (sec) => {
+    setActiveSection(sec);
+    setTimeout(() => {
+      if (questionsRef.current) questionsRef.current.scrollTop = 0;
+    }, 50);
+  };
+
   const dismissWarning = (id) => setWarnings(prev => prev.filter(w => w.id !== id));
+
+  // Listen for admin reopen via socket or storage event
+  useEffect(() => {
+    const handleReopen = () => { loadData(); };
+    window.addEventListener('submission-reopened', handleReopen);
+    return () => window.removeEventListener('submission-reopened', handleReopen);
+  }, []);
+
+  // Listen for score-published socket event from admin
+  useEffect(() => {
+    const userId = user?._id || user?.id;
+    if (!userId || !token) return;
+    // Import io dynamically to avoid issues
+    let s;
+    try {
+      const { io } = require('socket.io-client');
+      s = io('http://localhost:5000', {
+        transports: ['websocket'],
+        reconnection: true,
+        auth: { token },
+      });
+      s.on('connect', () => s.emit('join-user', userId));
+      s.on('score-published', (data) => {
+        if (data.date === date) {
+          setSubmission(prev => prev ? {
+            ...prev,
+            scorePublished: true,
+            manualScore: data.manualScore,
+            trainerFeedback: data.trainerFeedback,
+            adminFeedback: data.adminFeedback,
+          } : prev);
+        }
+      });
+    } catch(e) { /* socket.io not available */ }
+    return () => { if (s) s.disconnect(); };
+  }, [date, token]);
 
   // Load data
   const courseId = user?.enrolledCourse;
@@ -93,46 +165,138 @@ export default function AssignmentPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const qRes = await axios.get(`http://localhost:5000/api/questions/${courseId}/${date}`, { headers });
-      const all = qRes.data;
+      const qRes = await api.get(`http://localhost:5000/api/questions/${courseId}/${date}`, { headers });
+      // Backend returns { questions, deadline } — deadline is ISO string or null
+      const { questions: allQs, deadline: deadlineISO } = qRes.data;
+
+      // Compute effective deadline: admin-set value OR midnight of the assignment date
+      let effectiveDeadline;
+      if (deadlineISO) {
+        effectiveDeadline = new Date(deadlineISO);
+      } else {
+        // fallback: midnight at the end of the assignment date
+        const d = new Date(date); d.setDate(d.getDate() + 1); d.setHours(0, 0, 0, 0);
+        effectiveDeadline = d;
+      }
+      setDeadlineDate(effectiveDeadline);
+
       const grouped = {
-        A: all.filter(q => q.section === 'A'),
-        B: all.filter(q => q.section === 'B'),
-        C: all.filter(q => q.section === 'C'),
+        A: allQs.filter(q => q.section === 'A'),
+        B: allQs.filter(q => q.section === 'B'),
+        C: allQs.filter(q => q.section === 'C'),
       };
       setQuestions(grouped);
-      const initRes = await axios.post('http://localhost:5000/api/submissions/init',
+      const initRes = await api.post('http://localhost:5000/api/submissions/init',
         { traineeId: user._id, courseId, date, secAQuestions: grouped.A, secBQuestions: grouped.B, secCQuestions: grouped.C },
         { headers });
       setSubmission(initRes.data);
-      setSubmitted(initRes.data.status === 'submitted');
+      const isSubmitted = initRes.data.status === 'submitted';
+      setSubmitted(isSubmitted);
+      if (isSubmitted) setIsEditing(false);
+
+      // Build answers map: try questionId match first, fallback to position
       const ea = {};
       ['A','B','C'].forEach(sec => {
-        initRes.data[`sec${sec}`]?.answers?.forEach(a => { ea[a.questionId] = a.answerText; });
+        const subAnswers = initRes.data[`sec${sec}`]?.answers || [];
+        const qs = grouped[sec];
+        const byQId = {};
+        subAnswers.forEach(a => { byQId[a.questionId?.toString()] = a.answerText || ''; });
+        qs.forEach((q, i) => {
+          const qid = q._id.toString();
+          if (byQId[qid] !== undefined) {
+            ea[qid] = byQId[qid];
+          } else if (subAnswers[i]) {
+            ea[qid] = subAnswers[i].answerText || '';
+          } else {
+            ea[qid] = '';
+          }
+        });
       });
       setAnswers(ea);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
-  const handleAnswer = async (questionId, text, section, marks) => {
-    setAnswers(prev => ({ ...prev, [questionId]: text }));
-    setSaving(true);
+  // ── Debounce ref: avoid flooding API on every keystroke ──
+  const saveTimer = useRef({});
+
+  const handleAnswer = (questionId, text, section, marks) => {
+    const qid = questionId.toString();
+    setAnswers(prev => ({ ...prev, [qid]: text }));
+
+    // Debounce auto-save in background
+    if (saveTimer.current[qid]) clearTimeout(saveTimer.current[qid]);
+    saveTimer.current[qid] = setTimeout(async () => {
+      try {
+        const res = await api.patch('http://localhost:5000/api/submissions/answer',
+          { traineeId: user._id, date, section, questionId: qid, answerText: text, marks }, { headers });
+        setSubmission(res.data);
+      } catch (err) { console.error('Auto-save answer error:', err); }
+    }, 800);
+  };
+
+  // Per-question explicit Save button
+  const handleSaveQuestion = async (questionId, section, marks) => {
+    const qid = questionId.toString();
+    const text = answers[qid] || '';
+    setSavingQ(prev => ({ ...prev, [qid]: true }));
+    // Cancel any pending debounce
+    if (saveTimer.current[qid]) { clearTimeout(saveTimer.current[qid]); delete saveTimer.current[qid]; }
     try {
-      const res = await axios.patch('http://localhost:5000/api/submissions/answer',
-        { traineeId: user._id, date, section, questionId, answerText: text, marks }, { headers });
+      const res = await api.patch('http://localhost:5000/api/submissions/answer',
+        { traineeId: user._id, date, section, questionId: qid, answerText: text, marks }, { headers });
       setSubmission(res.data);
+    } catch (err) { console.error('Save question error:', err); }
+    finally {
+      setSavingQ(prev => ({ ...prev, [qid]: false }));
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!window.confirm(`Submit your assignment? You can still edit until ${deadlineDate ? deadlineDate.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) : 'deadline'}.`)) return;
+    try {
+      setSaving(true);
+      // Cancel all pending debounce timers
+      Object.keys(saveTimer.current).forEach(qid => {
+        clearTimeout(saveTimer.current[qid]);
+        delete saveTimer.current[qid];
+      });
+      // Save ALL answered questions before submitting
+      for (const sec of ['A','B','C']) {
+        for (const q of (questions[sec] || [])) {
+          const qid = q._id.toString();
+          const text = answers[qid] || '';
+          if (text.trim().length > 0) {
+            try {
+              await api.patch('http://localhost:5000/api/submissions/answer',
+                { traineeId: user._id, date, section: sec, questionId: qid, answerText: text, marks: q.marks },
+                { headers });
+            } catch (e) { console.error('Save before submit:', e); }
+          }
+        }
+      }
+      // Now submit
+      await api.patch('http://localhost:5000/api/submissions/submit', { traineeId: user._id, date }, { headers });
+      setSubmitted(true);
+      setIsEditing(false);
+      window.dispatchEvent(new Event('assignment-submitted'));
     } catch (err) { console.error(err); }
     finally { setSaving(false); }
   };
 
-  const handleSubmit = async () => {
-    if (!window.confirm('Are you sure you want to submit? You cannot edit after submission!')) return;
-    try {
-      await axios.patch('http://localhost:5000/api/submissions/submit', { traineeId: user._id, date }, { headers });
-      setSubmitted(true);
-    } catch (err) { console.error(err); }
+  const handleEditAnswers = () => {
+    if (deadlinePassed) {
+      alert('Deadline has passed. Answers are view-only.');
+      return;
+    }
+    setIsEditing(true);
   };
+
+  // Whether textareas are disabled:
+  // - disabled if deadline passed
+  // - disabled if submitted and NOT in editing mode
+  // Past date: always read-only. Today: read-only if submitted and not editing.
+  const isReadOnly = deadlinePassed || (submitted && !isEditing);
 
   const secInfo = {
     A: { label:'Section A', level:'Easy',   total:20, min:10, marks:1, color:'#1D9E75', bg: isDark?'#1D9E7515':'#E1F5EE' },
@@ -183,26 +347,95 @@ export default function AssignmentPage() {
           <div style={{ marginLeft:'auto', borderRadius:12, padding:'8px 16px', textAlign:'center', transition:'all 0.3s', flexShrink:0, background: timerUrgent?'#ff000015':'rgba(255,255,255,0.1)', border:`1.5px solid ${timerUrgent?'#ff5555':'rgba(255,255,255,0.2)'}`, animation: timerUrgent?'pulse 1s ease-in-out infinite':'none' }}>
             <div style={{ fontSize:10, color: timerUrgent?'#ff9999':'#a0b4c8', fontWeight:600, letterSpacing:1, marginBottom:2 }}>⏰ TIME LEFT</div>
             <div style={{ fontSize:22, fontWeight:800, color: timerUrgent?'#ff5555':'#ffffff', fontVariantNumeric:'tabular-nums', letterSpacing:2 }}>{timeLeft}</div>
-            <div style={{ fontSize:9, color: timerUrgent?'#ff9999':'#a0b4c8', marginTop:2 }}>Auto-submits at midnight</div>
+            <div style={{ fontSize:9, color: timerUrgent?'#ff9999':'#a0b4c8', marginTop:2 }}>{`Auto-submits at ${deadlineDate ? deadlineDate.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : 'deadline'}`}</div>
+          </div>
+        )}
+
+        {isToday && submitted && !deadlinePassed && (
+          <div style={{ marginLeft:'auto', borderRadius:12, padding:'8px 16px', textAlign:'center', flexShrink:0, background: timerUrgent?'#ff000015':'rgba(255,255,255,0.1)', border:`1.5px solid ${timerUrgent?'#ff5555':'rgba(255,255,255,0.2)'}` }}>
+            <div style={{ fontSize:10, color:'#a0b4c8', fontWeight:600, letterSpacing:1, marginBottom:2 }}>⏰ TIME LEFT TO EDIT</div>
+            <div style={{ fontSize:20, fontWeight:800, color: timerUrgent?'#ff5555':'#ffffff', fontVariantNumeric:'tabular-nums' }}>{timeLeft}</div>
           </div>
         )}
 
         {submitted && (
-          <div style={{ marginLeft:'auto', background:'#1D9E7522', border:'1.5px solid #1D9E75', color:'#1D9E75', borderRadius:12, padding:'10px 20px', fontWeight:700, fontSize:14, flexShrink:0 }}>✅ Submitted</div>
+          <div style={{ display:'flex', gap:8, alignItems:'center', marginLeft: isToday?0:'auto' }}>
+            <div style={{ background:'#1D9E7522', border:'1.5px solid #1D9E75', color:'#1D9E75', borderRadius:12, padding:'10px 20px', fontWeight:700, fontSize:14, flexShrink:0 }}>✅ Submitted</div>
+            {!deadlinePassed && !isEditing && (
+              <button
+                onClick={handleEditAnswers}
+                style={{ background:'#185FA522', border:'1.5px solid #185FA5', color:'#185FA5', borderRadius:12, padding:'10px 20px', fontWeight:700, fontSize:14, cursor:'pointer', flexShrink:0 }}>
+                ✏️ Edit Answers
+              </button>
+            )}
+            {isEditing && (
+              <div style={{ background:'#f5a62322', border:'1.5px solid #f5a623', color:'#f5a623', borderRadius:12, padding:'10px 16px', fontWeight:700, fontSize:13, flexShrink:0 }}>
+                ✏️ Editing Mode
+              </div>
+            )}
+            {deadlinePassed && (
+              <div style={{ background:'#55555522', border:'1.5px solid #888', color:'#aaa', borderRadius:12, padding:'10px 16px', fontWeight:600, fontSize:13, flexShrink:0 }}>
+                🔒 Deadline Passed
+              </div>
+            )}
+          </div>
         )}
 
         <div style={{ textAlign:'right', flexShrink:0 }}>
-          <span style={{ fontSize:28, fontWeight:700, color:'#fff' }}>{totalScore}</span>
-          <span style={{ fontSize:16, color:'#a0b4c8' }}>/130</span>
+          {submission?.scorePublished ? (
+            <>
+              <span style={{ fontSize:28, fontWeight:700, color:'#fff' }}>{submission.manualScore ?? totalScore}</span>
+              <span style={{ fontSize:16, color:'#a0b4c8' }}>/130</span>
+            </>
+          ) : submitted ? (
+            <span style={{ fontSize:13, color:'#a0b4c8', fontStyle:'italic' }}>⏳ Awaiting grade</span>
+          ) : null}
         </div>
         <button onClick={toggleTheme} style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'#fff', fontSize:12, fontWeight:600, padding:'6px 12px', borderRadius:8, cursor:'pointer' }}>
           {isDark ? '☀️' : '🌙'}
         </button>
       </div>
 
+      {/* Score + Feedback panel — shown only after admin publishes */}
+      {submission?.scorePublished && (
+        <div style={{ background:'#1D9E7515', borderBottom:'1px solid #1D9E7533', padding:'12px 24px', flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:24, flexWrap:'wrap' }}>
+            <div>
+              <span style={{ color:'#1D9E75', fontWeight:700, fontSize:13 }}>✅ Score Released</span>
+              <span style={{ color:'#fff', fontWeight:800, fontSize:22, marginLeft:10 }}>{submission.manualScore ?? 0}</span>
+              <span style={{ color:'#a0b4c8', fontSize:13 }}>/130</span>
+            </div>
+            {submission.trainerFeedback && (
+              <div style={{ color:'#cdd', fontSize:13 }}>
+                <span style={{ color:'#a0b4c8' }}>Trainer: </span>{submission.trainerFeedback}
+              </div>
+            )}
+            {submission.adminFeedback && (
+              <div style={{ color:'#cdd', fontSize:13 }}>
+                <span style={{ color:'#a0b4c8' }}>Admin: </span>{submission.adminFeedback}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit mode notice bar */}
+      {isEditing && (
+        <div style={{ background:'#f5a62315', borderBottom:'1px solid #f5a62333', color:'#f5a623', textAlign:'center', padding:'8px 24px', fontSize:13, fontWeight:600, flexShrink:0 }}>
+          ✏️ Editing mode — Save each answer individually, then re-submit when done.
+        </div>
+      )}
+
+      {/* Deadline passed view-only notice */}
+      {deadlinePassed && submitted && (
+        <div style={{ background:'#55555515', borderBottom:'1px solid #88888833', color:'#888', textAlign:'center', padding:'8px 24px', fontSize:13, fontWeight:600, flexShrink:0 }}>
+          🔒 Deadline passed — Viewing submitted answers (read-only)
+        </div>
+      )}
+
       {isToday && !submitted && timerUrgent && (
         <div style={{ background:'#ff000015', borderBottom:'1px solid #ff555533', color:'#ff5555', textAlign:'center', padding:'8px 24px', fontSize:13, fontWeight:600, flexShrink:0 }}>
-          ⚠️ Less than 30 minutes left! Assignment will AUTO-SUBMIT at midnight.
+          {`⚠️ Less than 30 minutes left! Assignment will AUTO-SUBMIT at ${deadlineDate ? deadlineDate.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) : 'deadline'}.`}
         </div>
       )}
 
@@ -211,7 +444,7 @@ export default function AssignmentPage() {
         {['A','B','C'].map(sec => (
           <button key={sec}
             style={{ flex:1, display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 16px', borderRadius:10, border:'none', cursor:'pointer', fontSize:14, fontWeight:600, transition:'all 0.2s', background: activeSection===sec ? secInfo[sec].color : theme.hoverBg, color: activeSection===sec ? '#fff' : theme.textMuted }}
-            onClick={() => setActiveSection(sec)}>
+            onClick={() => handleSectionChange(sec)}>
             <span>{secInfo[sec].label}</span>
             <span style={{ fontSize:12, background:'rgba(255,255,255,0.25)', padding:'2px 8px', borderRadius:20 }}>{getAnswered(sec)}/{secInfo[sec].total}</span>
           </button>
@@ -234,13 +467,16 @@ export default function AssignmentPage() {
       </div>
 
       {/* Questions */}
-      <div style={{ flex:1, overflowY:'auto', padding:'16px 24px', display:'flex', flexDirection:'column', gap:12 }}>
+      <div ref={questionsRef} style={{ flex:1, overflowY:'auto', padding:'16px 24px', display:'flex', flexDirection:'column', gap:12 }}>
         {questions[activeSection].length === 0 ? (
           <div style={{ textAlign:'center', padding:48, color: theme.textMuted }}>
             <p>No questions added for this section yet.</p>
           </div>
         ) : questions[activeSection].map((q, idx) => {
-          const isAnswered = answers[q._id]?.trim().length > 0;
+          const qid = q._id.toString();
+          const answerText = answers[qid] || '';
+          const isAnswered = answerText.trim().length > 0;
+          const isSavingThis = savingQ[qid];
           return (
             <div key={q._id} style={{ background: theme.cardBg, borderRadius:12, padding:16, border:`1px solid ${theme.border}`, borderLeft:`4px solid ${isAnswered?secInfo[activeSection].color:theme.border}` }}>
               <div style={{ display:'flex', alignItems:'flex-start', gap:12, marginBottom:10 }}>
@@ -253,14 +489,65 @@ export default function AssignmentPage() {
                 </span>
               </div>
               <textarea
-                style={{ width:'100%', border:`1.5px solid ${isAnswered?secInfo[activeSection].color:theme.border}`, borderRadius:8, padding:'10px 12px', fontSize:13, color: theme.textPrimary, background: theme.inputBg, resize:'vertical', fontFamily:'inherit', boxSizing:'border-box', outline:'none', transition:'border-color 0.2s', opacity: submitted?0.7:1 }}
-                placeholder={submitted ? 'Submitted' : 'Your answer here...'}
-                value={answers[q._id] || ''}
-                disabled={submitted}
-                onChange={e => handleAnswer(q._id, e.target.value, activeSection, q.marks)}
-                rows={3}
+                style={{ width:'100%', border:`1.5px solid ${isAnswered?secInfo[activeSection].color:theme.border}`, borderRadius:8, padding:'10px 12px', fontSize:13, color: theme.textPrimary, background: isReadOnly ? (isDark?'#1a1f2e':'#f8f9fc') : theme.inputBg, resize:'vertical', fontFamily:'inherit', boxSizing:'border-box', outline:'none', transition:'border-color 0.2s', opacity: isReadOnly?0.8:1, cursor: isReadOnly?'default':'text' }}
+                placeholder={activeSection === 'C' ? 'Describe your approach (optional) — code below 👇' : 'Your answer here...'}
+                value={answerText}
+                disabled={isReadOnly}
+                onChange={e => handleAnswer(qid, e.target.value, activeSection, q.marks)}
+                rows={activeSection === 'C' ? 2 : 3}
               />
-              {isAnswered && <div style={{ fontSize:11, color:'#1D9E75', fontWeight:600, marginTop:6 }}>✓ Answered</div>}
+
+              {/* Save button — only show when NOT read-only */}
+              {!isReadOnly && (
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginTop:8 }}>
+                  <button
+                    onClick={() => handleSaveQuestion(qid, activeSection, q.marks)}
+                    disabled={isSavingThis}
+                    style={{
+                      padding:'6px 16px', borderRadius:8, border:'none', cursor: isSavingThis?'default':'pointer',
+                      background: isSavingThis ? '#aaa' : (isAnswered ? secInfo[activeSection].color : '#555'),
+                      color:'#fff', fontSize:12, fontWeight:700, transition:'all 0.2s',
+                      opacity: isSavingThis ? 0.7 : 1,
+                    }}>
+                    {isSavingThis ? '⏳ Saving...' : '💾 Save'}
+                  </button>
+                  {isAnswered && <span style={{ fontSize:11, color:'#1D9E75', fontWeight:600 }}>✓ Answered</span>}
+                </div>
+              )}
+
+              {/* Code Editor toggle */}
+              <div style={{ marginTop: 12 }}>
+                <button
+                  onClick={() => toggleEditor(qid)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '7px 16px', borderRadius: 8, cursor: 'pointer',
+                    background: openEditors[qid] ? '#7c6af5' : '#7c6af515',
+                    color: openEditors[qid] ? '#fff' : '#7c6af5',
+                    fontSize: 13, fontWeight: 700, transition: 'all 0.2s',
+                    border: '1px solid #7c6af540',
+                  }}
+                >
+                  <span>💻</span>
+                  <span>{openEditors[qid] ? 'Hide Code Editor' : 'Open Code Editor'}</span>
+                  <span style={{ fontSize:11, opacity:0.8 }}>{openEditors[qid] ? ' ▲' : ' ▼'}</span>
+                </button>
+                {openEditors[qid] && (
+                  <div style={{ marginTop: 10 }}>
+                    <CodeEditor
+                      question={q}
+                      courseId={courseId}
+                      date={date}
+                      token={token}
+                      theme={theme}
+                      submitted={isReadOnly}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Read-only answered indicator */}
+              {isReadOnly && isAnswered && <div style={{ fontSize:11, color:'#1D9E75', fontWeight:600, marginTop:6 }}>✓ Answered</div>}
             </div>
           );
         })}
@@ -274,13 +561,43 @@ export default function AssignmentPage() {
           <span>Sec C: {getAnswered('C')}/10</span>
           {saving && <span>Saving...</span>}
         </div>
-        {!submitted ? (
-          <button style={{ background: isDark?'#1a2740':'#1e3a5f', color:'#fff', border:'none', padding:'10px 24px', borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer' }} onClick={handleSubmit}>
-            Submit Assignment
-          </button>
-        ) : (
-          <div style={{ background:'#E1F5EE', color:'#1D9E75', padding:'10px 20px', borderRadius:10, fontWeight:600, fontSize:14 }}>✓ Submitted</div>
-        )}
+        <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+          {/* Edit mode: show Re-submit button */}
+          {isEditing && !deadlinePassed && (
+            <button
+              style={{ background:'#f5a623', color:'#fff', border:'none', padding:'10px 24px', borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer' }}
+              onClick={handleSubmit}>
+              🔄 Re-submit
+            </button>
+          )}
+          {/* Not yet submitted */}
+          {!submitted && !deadlinePassed && (
+            <button
+              style={{ background: isDark?'#1a2740':'#1e3a5f', color:'#fff', border:'none', padding:'10px 24px', borderRadius:10, fontSize:14, fontWeight:600, cursor:'pointer' }}
+              onClick={handleSubmit} disabled={saving}>
+              {saving ? '⏳ Saving & Submitting...' : 'Submit Assignment'}
+            </button>
+          )}
+          {/* Submitted, not editing, deadline not passed */}
+          {submitted && !isEditing && !deadlinePassed && (
+            <div style={{ display:'flex', gap:10 }}>
+              <div style={{ background:'#E1F5EE', color:'#1D9E75', padding:'10px 20px', borderRadius:10, fontWeight:600, fontSize:14 }}>✓ Submitted</div>
+              <button
+                style={{ background:'#185FA522', color:'#185FA5', border:'1.5px solid #185FA5', padding:'10px 20px', borderRadius:10, fontWeight:600, fontSize:14, cursor:'pointer' }}
+                onClick={handleEditAnswers}>
+                ✏️ Edit Answers
+              </button>
+            </div>
+          )}
+          {/* Submitted, deadline passed */}
+          {submitted && deadlinePassed && (
+            <div style={{ background:'#E1F5EE', color:'#1D9E75', padding:'10px 20px', borderRadius:10, fontWeight:600, fontSize:14 }}>✓ Submitted</div>
+          )}
+          {/* Not submitted, deadline passed */}
+          {!submitted && deadlinePassed && (
+            <div style={{ background:'#fdecea', color:'#c0392b', padding:'10px 20px', borderRadius:10, fontWeight:600, fontSize:14 }}>⛔ Deadline Passed</div>
+          )}
+        </div>
       </div>
 
       <style>{`

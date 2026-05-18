@@ -1,373 +1,238 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import api from '../api';
 
-const API = 'http://localhost:5000';
-
+const API = process.env.REACT_APP_API_URL || "";
 const WeeklyReportPage = () => {
-  const { user } = useAuth();
-  const { isDark, toggleTheme, theme } = useTheme();
+  const { user, token } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const [report, setReport] = useState(null);
+  const printRef = useRef();
+  const [report, setReport]   = useState(null);
   const [loading, setLoading] = useState(true);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [error, setError]     = useState('');
+  const tok = token || localStorage.getItem('lms_token_student') || localStorage.getItem('token');
 
-  const fetchReport = useCallback(async () => {
+  useEffect(() => { fetchReport(); }, []);
+
+  const fetchReport = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(`${API}/api/weekly-report`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setReport(res.data);
-    } catch (e) {
-      console.error(e);
-      // Fallback mock data if backend not ready
-      const now = new Date();
-      const days = [];
-      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(now.getDate() - i);
-        days.push({ date: d.toISOString().split('T')[0], day: dayNames[d.getDay()], status: 'no_data' });
-      }
-      setReport({
-        period: { from: days[0].date, to: days[6].date },
-        attendance: { days, present: 0, absent: 0, percentage: 0 },
-        assignments: { submitted: 0, pending: 0, total: 0 },
-        trend: [
-          { week: 'Week 1', pct: 0, present: 0, total: 0 },
-          { week: 'Week 2', pct: 0, present: 0, total: 0 },
-          { week: 'Week 3', pct: 0, present: 0, total: 0 },
-          { week: 'Week 4', pct: 0, present: 0, total: 0 },
-        ]
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { if (user) fetchReport(); }, [user, fetchReport]);
-
-  const downloadPDF = async () => {
-    if (!report) return;
-    setPdfLoading(true);
-    try {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const W = doc.internal.pageSize.getWidth();
-      const now = new Date();
-
-      // Header
-      doc.setFillColor(124, 106, 245);
-      doc.rect(0, 0, W, 42, 'F');
-      doc.setFillColor(0, 212, 170);
-      doc.rect(0, 38, W, 5, 'F');
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      doc.text('LMS Pro — Weekly Report', W / 2, 17, { align: 'center' });
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`${user?.name || 'Student'}  |  ${report.period.from} to ${report.period.to}`, W / 2, 28, { align: 'center' });
-
-      let y = 52;
-
-      // Attendance summary
-      doc.setFillColor(245, 247, 250);
-      doc.roundedRect(10, y, W - 20, 36, 4, 4, 'F');
-      doc.setTextColor(60, 60, 80);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('📅  Weekly Attendance', 16, y + 10);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      [
-        ['Present', `${report.attendance.present} days`],
-        ['Absent', `${report.attendance.absent} days`],
-        ['Attendance %', `${report.attendance.percentage}%`],
-      ].forEach(([label, val], i) => {
-        const col = i < 2 ? 16 : 110;
-        const row = i < 2 ? y + 20 + (i * 9) : y + 25;
-        doc.setTextColor(100, 100, 120); doc.text(label + ':', col, row);
-        doc.setTextColor(0, 180, 140); doc.setFont('helvetica', 'bold');
-        doc.text(val, col + 42, row); doc.setFont('helvetica', 'normal');
-      });
-
-      y += 46;
-
-      // Day-by-day attendance
-      doc.setFillColor(245, 247, 250);
-      doc.roundedRect(10, y, W - 20, 38, 4, 4, 'F');
-      doc.setTextColor(60, 60, 80); doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-      doc.text('📆  Day-by-Day', 16, y + 10);
-      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-      report.attendance.days.forEach((d, i) => {
-        const col = 16 + (i * 26);
-        const isPresent = d.status === 'present';
-        const isAbsent = d.status === 'absent';
-        doc.setTextColor(100, 100, 120); doc.text(d.day, col, y + 20);
-        if (isPresent) { doc.setFillColor(0, 180, 140); doc.setTextColor(0, 180, 140); }
-        else if (isAbsent) { doc.setFillColor(245, 85, 85); doc.setTextColor(245, 85, 85); }
-        else { doc.setFillColor(200, 200, 210); doc.setTextColor(160, 160, 180); }
-        doc.circle(col + 5, y + 28, 4, 'F');
-        doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold');
-        doc.text(isPresent ? '✓' : isAbsent ? '✗' : '-', col + 3.2, y + 29.5);
-        doc.setFont('helvetica', 'normal');
-      });
-
-      y += 48;
-
-      // Assignment summary
-      doc.setFillColor(245, 247, 250);
-      doc.roundedRect(10, y, W - 20, 30, 4, 4, 'F');
-      doc.setTextColor(60, 60, 80); doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-      doc.text('📝  Assignments This Week', 16, y + 10);
-      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-      [
-        ['Submitted', `${report.assignments.submitted}`],
-        ['Pending', `${report.assignments.pending}`],
-        ['Total', `${report.assignments.total}`],
-      ].forEach(([label, val], i) => {
-        const col = 16 + (i * 60);
-        doc.setTextColor(100, 100, 120); doc.text(label + ':', col, y + 22);
-        doc.setTextColor(124, 106, 245); doc.setFont('helvetica', 'bold');
-        doc.text(val, col + 28, y + 22); doc.setFont('helvetica', 'normal');
-      });
-
-      y += 40;
-
-      // 4-week trend
-      doc.setFillColor(245, 247, 250);
-      doc.roundedRect(10, y, W - 20, 50, 4, 4, 'F');
-      doc.setTextColor(60, 60, 80); doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-      doc.text('📈  4-Week Attendance Trend', 16, y + 10);
-      doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-      const maxTrend = Math.max(...report.trend.map(t => t.pct), 1);
-      report.trend.forEach((t, i) => {
-        const barY = y + 20 + (i * 8);
-        const barW = (t.pct / 100) * (W - 70);
-        const col = t.pct >= 75 ? [0, 180, 140] : t.pct >= 50 ? [245, 166, 35] : [245, 85, 85];
-        doc.setTextColor(100, 100, 120); doc.text(t.week, 16, barY);
-        doc.setFillColor(...col); doc.rect(40, barY - 4, barW, 5, 'F');
-        doc.setTextColor(...col); doc.setFont('helvetica', 'bold');
-        doc.text(`${t.pct}%`, 42 + barW, barY); doc.setFont('helvetica', 'normal');
-      });
-
-      y += 60;
-
-      // Footer
-      doc.setFillColor(240, 242, 245); doc.rect(0, 277, W, 20, 'F');
-      doc.setTextColor(140, 140, 160); doc.setFontSize(8);
-      doc.text('LMS Pro — Weekly Student Report', W / 2, 287, { align: 'center' });
-      doc.text(`Generated: ${now.toLocaleDateString('en-IN')}`, W - 15, 287, { align: 'right' });
-
-      doc.save(`LMS_Weekly_${user?.name?.replace(/ /g,'_') || 'Student'}_${report.period.to}.pdf`);
-    } catch (err) {
-      console.error('PDF error:', err);
-      alert('PDF generation failed.');
-    } finally {
-      setPdfLoading(false);
-    }
+      const { data } = await api.get(`${API}/api/weekly-report`, { headers: { Authorization: `Bearer ${tok}` } });
+      setReport(data);
+    } catch (e) { setError(e.response?.data?.error || 'Failed to load report'); }
+    finally { setLoading(false); }
   };
 
-  const statusColor = (status, theme) => {
-    if (status === 'present') return { bg: theme.accent + '22', border: theme.accent, text: theme.accent, icon: '✓' };
-    if (status === 'absent')  return { bg: '#f5555522', border: '#f55555', text: '#f55555', icon: '✗' };
-    if (status === 'no_class') return { bg: theme.border + '44', border: theme.border, text: theme.textMuted, icon: '—' };
-    return { bg: theme.border + '22', border: theme.border, text: theme.textMuted, icon: '?' };
+  const downloadPDF = () => {
+    // Give browser a moment to apply print styles
+    setTimeout(() => window.print(), 100);
   };
 
-  const SidebarNav = () => (
-    <aside style={{ width: 220, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', padding: '24px 0', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px 28px' }}>
-        <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⚡</div>
-        <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>LMS Pro</span>
-      </div>
-      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
-        {[
-          { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
-          { icon: '📅', label: 'Attendance',    path: '/attendance' },
-          { icon: '🎥', label: 'Classes',       path: '/courses' },
-          { icon: '📝', label: 'Assignments',   path: '/assignments' },
-          { icon: '🔔', label: 'Notifications', path: '/notifications' },
-          { icon: '📊', label: 'Analytics',     path: '/analytics' },
-          { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
-          { icon: '📅', label: 'Weekly Report', path: '/weekly-report', active: true },
-          { icon: '👤', label: 'Profile',       path: '/profile' },
-        ].map(item => (
-          <button key={item.path}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: 'none', background: item.active ? theme.navActiveBg : 'transparent', color: item.active ? theme.navActiveColor : theme.navInactiveColor, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%' }}
-            onClick={() => navigate(item.path)}>
-            <span style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </nav>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px', borderTop: `1px solid ${theme.border}` }}>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: theme.textSecondary }}>{user?.name || 'Student'}</div>
-          <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 2 }}>{user?.role === 'teacher' ? 'Teacher' : 'Student'}</div>
-        </div>
-      </div>
-      <button onClick={toggleTheme} style={{ margin: '0 16px 16px', padding: '8px 12px', borderRadius: 10, border: `1px solid ${theme.border}`, background: theme.toggleBg, color: theme.toggleColor, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-        {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
-      </button>
-    </aside>
+  const statusColor = s => ({ present:'#10b981', absent:'#ef4444', late:'#f59e0b' }[s] || '#9ca3af');
+  const statusLabel = s => ({ present:'P', absent:'A', late:'L', no_class:'—' }[s] || '?');
+
+  const C = {
+    bg: isDark ? '#0f1117' : '#f8fafc', card: isDark ? '#1a1d27' : '#fff',
+    border: isDark ? '#2a2d3a' : '#e2e8f0', text: isDark ? '#f1f5f9' : '#1e293b',
+    muted: isDark ? '#94a3b8' : '#64748b', sidebar: '#1e293b',
+  };
+
+  const NAV = [
+    { icon:'⊞', label:'Dashboard',    path:'/dashboard' },
+    { icon:'📅', label:'Attendance',   path:'/attendance' },
+    { icon:'🎥', label:'Classes',      path:'/courses' },
+    { icon:'📚', label:'My Course',    path:'/my-course' },
+    { icon:'📝', label:'Assignments',  path:'/assignments' },
+    { icon:'📊', label:'Analytics',    path:'/analytics' },
+    { icon:'📈', label:'Weekly Report',path:'/weekly-report', active:true },
+    { icon:'🏆', label:'Leaderboard',  path:'/leaderboard' },
+    { icon:'👤', label:'Profile',      path:'/profile' },
+  ];
+
+  if (loading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:C.bg,color:C.muted,flexDirection:'column',gap:12}}>
+      <div style={{fontSize:32}}>📊</div>
+      <div style={{fontSize:14}}>Loading your weekly report...</div>
+    </div>
   );
 
-  return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
-      <SidebarNav />
-      <main style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+  const att  = report?.attendance || {};
+  const asgn = report?.assignments || {};
+  const trend = report?.trend || [];
+  const pct  = att.percentage || 0;
+  const pctColor = pct >= 75 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
 
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: theme.textPrimary, marginBottom: 4 }}>📅 Weekly Report</div>
-            <div style={{ fontSize: 13, color: theme.textMuted }}>
-              {report ? `${report.period.from}  →  ${report.period.to}` : 'Loading period...'}
-            </div>
-          </div>
-          <button
-            onClick={downloadPDF}
-            disabled={pdfLoading || !report}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', borderRadius: 10, border: 'none', background: pdfLoading ? theme.border : 'linear-gradient(135deg, #7c6af5, #00d4aa)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: pdfLoading ? 'not-allowed' : 'pointer', boxShadow: pdfLoading ? 'none' : '0 4px 12px rgba(124,106,245,0.35)' }}>
-            {pdfLoading ? '⏳ Generating...' : '📄 Download PDF'}
+  return (
+    <div style={{display:'flex',minHeight:'100vh',background:C.bg,color:C.text,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
+      {/* Sidebar */}
+      <aside style={{width:220,background:C.sidebar,display:'flex',flexDirection:'column',padding:'24px 0',position:'sticky',top:0,height:'100vh',overflowY:'auto',flexShrink:0}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,padding:'0 20px 24px'}}>
+          <div style={{width:34,height:34,background:'linear-gradient(135deg,#6366f1,#8b5cf6)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>⚡</div>
+          <span style={{fontSize:18,fontWeight:700,color:'#fff'}}>LMS Pro</span>
+        </div>
+        <nav style={{flex:1,display:'flex',flexDirection:'column',gap:2,padding:'0 10px'}}>
+          {NAV.map(item => (
+            <button key={item.path} onClick={() => navigate(item.path)}
+              style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,border:'none',background:item.active?'rgba(99,102,241,0.2)':'transparent',color:item.active?'#a5b4fc':'rgba(255,255,255,0.5)',fontSize:13,fontWeight:item.active?700:400,cursor:'pointer',textAlign:'left',width:'100%',borderLeft:item.active?'3px solid #6366f1':'3px solid transparent'}}>
+              <span style={{fontSize:15,width:20,textAlign:'center'}}>{item.icon}</span><span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div style={{padding:'14px',borderTop:'1px solid rgba(255,255,255,0.1)'}}>
+          <button onClick={toggleTheme} style={{width:'100%',padding:'9px',borderRadius:10,border:'1px solid rgba(255,255,255,0.15)',background:'rgba(255,255,255,0.05)',color:'#ccc',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+            {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
           </button>
         </div>
+      </aside>
 
-        {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
-            <div style={{ width: 32, height: 32, border: `3px solid ${theme.border}`, borderTop: `3px solid ${theme.accent}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+      {/* Main */}
+      <main style={{flex:1,padding:'32px',overflowY:'auto'}}>
+        {/* Header */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:28}}>
+          <div>
+            <h2 style={{fontSize:22,fontWeight:800,margin:0,color:C.text}}>📈 Weekly Performance Report</h2>
+            {report?.period && <p style={{fontSize:13,color:C.muted,margin:'4px 0 0'}}>{report.period.from} → {report.period.to} · {user?.name}</p>}
           </div>
-        ) : !report ? (
-          <p style={{ color: theme.textMuted, textAlign: 'center', padding: 40 }}>Could not load report.</p>
-        ) : (
-          <>
+          <div style={{display:'flex',gap:10}}>
+            <button onClick={fetchReport} style={{padding:'9px 18px',borderRadius:10,border:`1px solid ${C.border}`,background:C.card,color:C.text,fontSize:13,fontWeight:600,cursor:'pointer'}}>🔄 Refresh</button>
+            <button onClick={downloadPDF} style={{padding:'9px 20px',borderRadius:10,border:'none',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer'}}>⬇️ Download PDF</button>
+          </div>
+        </div>
+
+        {error && <div style={{background:'#fee2e2',border:'1px solid #fca5a5',borderRadius:10,padding:'12px 16px',color:'#dc2626',fontSize:13,marginBottom:20}}>{error}</div>}
+
+        {report && (
+          <div ref={printRef} style={{display:'flex',flexDirection:'column',gap:20}}>
+            {/* Print header (hidden on screen, visible on print) */}
+            <div className="print-only" style={{display:'none',textAlign:'center',padding:'16px 0 8px',borderBottom:'2px solid #e2e8f0',marginBottom:16}}>
+              <div style={{fontSize:20,fontWeight:800}}>📈 Weekly Performance Report</div>
+              <div style={{fontSize:13,color:'#64748b',marginTop:4}}>{user?.name} | {report.period?.from} → {report.period?.to}</div>
+            </div>
+
             {/* Summary Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14}}>
               {[
-                { label: 'Days Present',     value: report.attendance.present,    icon: '✅', color: theme.accent },
-                { label: 'Days Absent',      value: report.attendance.absent,     icon: '❌', color: '#f55555' },
-                { label: 'Attendance %',     value: `${report.attendance.percentage}%`, icon: '📊', color: report.attendance.percentage >= 75 ? theme.accent : '#f5a623' },
-                { label: 'Assignments Done', value: `${report.assignments.submitted}/${report.assignments.total}`, icon: '📝', color: theme.accentPurple },
-              ].map((s, i) => (
-                <div key={i} style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: '18px' }}>
-                  <div style={{ fontSize: 22, marginBottom: 10 }}>{s.icon}</div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: s.color, marginBottom: 4 }}>{s.value}</div>
-                  <div style={{ fontSize: 12, color: theme.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</div>
+                {label:'Attendance',  value:`${pct}%`,           icon:'📅',color:pctColor,  sub:`${att.present||0}P / ${att.absent||0}A`},
+                {label:'Assignments', value:asgn.submitted||0,   icon:'✅',color:'#10b981', sub:`${asgn.pending||0} pending`},
+                {label:'Total Score', value:asgn.totalScore||0,  icon:'🏆',color:'#6366f1', sub:'marks earned this week'},
+                {label:'Last Week',   value:`${trend[trend.length-1]?.pct||0}%`, icon:'📊',color:'#f59e0b',sub:'attendance trend'},
+              ].map((card,i) => (
+                <div key={i} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:'20px',display:'flex',flexDirection:'column',gap:6}}>
+                  <div style={{fontSize:24}}>{card.icon}</div>
+                  <div style={{fontSize:28,fontWeight:800,color:card.color}}>{card.value}</div>
+                  <div style={{fontSize:11,fontWeight:700,color:C.muted,textTransform:'uppercase',letterSpacing:'0.5px'}}>{card.label}</div>
+                  <div style={{fontSize:11,color:C.muted}}>{card.sub}</div>
                 </div>
               ))}
             </div>
 
-            {/* Day-by-Day Attendance */}
-            <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 16, padding: '20px' }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: theme.textSecondary, marginBottom: 16 }}>📆 Day-by-Day Attendance</div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                {report.attendance.days.map((d, i) => {
-                  const s = statusColor(d.status, theme);
-                  return (
-                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 52 }}>
-                      <div style={{ fontSize: 10, color: theme.textMuted, fontWeight: 700, textTransform: 'uppercase' }}>{d.day}</div>
-                      <div style={{ width: 44, height: 44, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800, background: s.bg, border: `2px solid ${s.border}`, color: s.text }}>
-                        {s.icon}
-                      </div>
-                      <div style={{ fontSize: 10, color: theme.textMuted }}>{d.date?.slice(5)}</div>
-                      <div style={{ fontSize: 9, color: s.text, fontWeight: 600, textTransform: 'capitalize' }}>{d.status === 'no_data' ? 'N/A' : d.status === 'no_class' ? 'Off' : d.status}</div>
+            {/* Daily Attendance */}
+            <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:'20px'}}>
+              <div style={{fontSize:14,fontWeight:700,color:C.muted,marginBottom:16}}>📅 Daily Attendance — This Week</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:10}}>
+                {(att.days||[]).map((day,i) => (
+                  <div key={i} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
+                    <div style={{fontSize:11,fontWeight:600,color:C.muted}}>{day.day}</div>
+                    <div style={{width:44,height:44,borderRadius:'50%',background:statusColor(day.status)+'22',border:`2px solid ${statusColor(day.status)}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,fontWeight:800,color:statusColor(day.status)}}>
+                      {statusLabel(day.status)}
                     </div>
-                  );
-                })}
+                    <div style={{fontSize:10,color:C.muted}}>{day.date?.slice(5)}</div>
+                  </div>
+                ))}
               </div>
-              <div style={{ display: 'flex', gap: 20, marginTop: 16, flexWrap: 'wrap' }}>
-                {[
-                  { color: theme.accent, label: '✓ Present' },
-                  { color: '#f55555', label: '✗ Absent' },
-                  { color: theme.textMuted, label: '— Off/No class' },
-                ].map((l, i) => (
-                  <span key={i} style={{ fontSize: 12, color: l.color, fontWeight: 500 }}>{l.label}</span>
+              <div style={{display:'flex',gap:20,marginTop:16,flexWrap:'wrap'}}>
+                {[['P','#10b981','Present'],['A','#ef4444','Absent'],['L','#f59e0b','Late'],['—','#9ca3af','No Class']].map(([l,c,label]) => (
+                  <div key={l} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:C.muted}}>
+                    <div style={{width:16,height:16,borderRadius:'50%',background:c+'33',border:`2px solid ${c}`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,fontWeight:800,color:c}}>{l}</div>
+                    {label}
+                  </div>
                 ))}
               </div>
             </div>
 
-            {/* Assignment Status */}
-            <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 16, padding: '20px' }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: theme.textSecondary, marginBottom: 16 }}>📝 Assignment Status This Week</div>
-              {report.assignments.total === 0 ? (
-                <p style={{ color: theme.textMuted, fontSize: 13 }}>No assignments this week.</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {[
-                    { label: 'Submitted', value: report.assignments.submitted, color: theme.accentPurple },
-                    { label: 'Pending',   value: report.assignments.pending,   color: theme.accentOrange },
-                  ].map((p, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <div style={{ fontSize: 13, color: theme.textSecondary, width: 80, flexShrink: 0 }}>{p.label}</div>
-                      <div style={{ flex: 1, height: 10, background: theme.border, borderRadius: 6, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', borderRadius: 6, width: `${report.assignments.total > 0 ? (p.value / report.assignments.total) * 100 : 0}%`, background: p.color, transition: 'width 1s ease' }}></div>
-                      </div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: p.color, width: 28, textAlign: 'right' }}>{p.value}</div>
-                    </div>
-                  ))}
+            {/* Attendance Progress */}
+            <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:'20px'}}>
+              <div style={{fontSize:14,fontWeight:700,color:C.muted,marginBottom:12}}>📊 Weekly Attendance Rate</div>
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:10}}>
+                <div style={{flex:1,height:14,background:C.border,borderRadius:7,overflow:'hidden'}}>
+                  <div style={{height:'100%',width:`${pct}%`,borderRadius:7,background:`linear-gradient(90deg,${pctColor},${pctColor}bb)`,transition:'width 0.8s ease'}}/>
                 </div>
-              )}
-            </div>
-
-            {/* 4-Week Trend */}
-            <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 16, padding: '20px' }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: theme.textSecondary, marginBottom: 16 }}>📈 4-Week Attendance Trend</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, height: 160, padding: '0 8px' }}>
-                {report.trend.map((t, i) => {
-                  const barColor = t.pct >= 75 ? theme.accent : t.pct >= 50 ? '#f5a623' : '#f55555';
-                  const maxPct = Math.max(...report.trend.map(x => x.pct), 1);
-                  return (
-                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: barColor }}>{t.pct}%</div>
-                      <div style={{ width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', height: 120, background: theme.pageBg, borderRadius: 8, overflow: 'hidden' }}>
-                        <div style={{ width: '80%', borderRadius: '6px 6px 0 0', minHeight: 4, height: `${(t.pct / maxPct) * 120}px`, background: `linear-gradient(to top, ${barColor}, ${barColor}80)`, transition: 'height 1s ease' }}></div>
-                      </div>
-                      <div style={{ fontSize: 11, color: theme.textMuted, fontWeight: 600 }}>{t.week}</div>
-                      <div style={{ fontSize: 10, color: theme.textMuted }}>{t.present}/{t.total} days</div>
-                    </div>
-                  );
-                })}
+                <span style={{fontSize:20,fontWeight:800,color:pctColor,minWidth:54}}>{pct}%</span>
               </div>
-              {/* 75% threshold marker */}
-              <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 24, height: 2, background: '#f5a623', borderRadius: 2 }}></div>
-                <span style={{ fontSize: 11, color: theme.textMuted }}>75% attendance threshold</span>
+              <div style={{fontSize:12,color:C.muted}}>
+                {pct>=75?'✅ Excellent attendance! Keep it up.':pct>=50?'⚠️ Needs improvement — try to attend more.':'❌ Critical — please attend more classes.'}
               </div>
             </div>
 
-            {/* Motivational tip */}
-            <div style={{
-              background: report.attendance.percentage >= 75
-                ? 'linear-gradient(135deg, #00d4aa18, #7c6af518)'
-                : 'linear-gradient(135deg, #f5a62318, #f5555518)',
-              border: `1px solid ${report.attendance.percentage >= 75 ? '#00d4aa44' : '#f5a62344'}`,
-              borderRadius: 14, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14
-            }}>
-              <div style={{ fontSize: 28 }}>{report.attendance.percentage >= 75 ? '🎉' : '💪'}</div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: theme.textPrimary, marginBottom: 4 }}>
-                  {report.attendance.percentage >= 75 ? 'Excellent week!' : 'Keep pushing!'}
-                </div>
-                <div style={{ fontSize: 13, color: theme.textMuted }}>
-                  {report.attendance.percentage >= 75
-                    ? `You attended ${report.attendance.percentage}% of classes this week. Keep up the great work!`
-                    : `Your attendance was ${report.attendance.percentage}% this week. Try to attend more classes next week to stay on track.`}
+            {/* 4-Week Trend Chart */}
+            {trend.length>0 && (
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:'20px'}}>
+                <div style={{fontSize:14,fontWeight:700,color:C.muted,marginBottom:16}}>📈 4-Week Attendance Trend</div>
+                <div style={{display:'flex',alignItems:'flex-end',gap:16,height:130,paddingBottom:4}}>
+                  {trend.map((w,i) => {
+                    const h  = Math.max(10,(w.pct/100)*100);
+                    const cl = w.pct>=75?'#10b981':w.pct>=50?'#f59e0b':'#ef4444';
+                    return (
+                      <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:5,height:'100%',justifyContent:'flex-end'}}>
+                        <div style={{fontSize:12,fontWeight:700,color:cl}}>{w.pct}%</div>
+                        <div style={{width:'100%',maxWidth:52,borderRadius:'6px 6px 0 0',background:`linear-gradient(180deg,${cl},${cl}99)`,height:`${h}%`,minHeight:10,transition:'height 0.6s ease'}}/>
+                        <div style={{fontSize:11,color:C.muted,fontWeight:600}}>{w.week}</div>
+                        <div style={{fontSize:10,color:C.muted}}>{w.present}/{w.total}</div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+            )}
+
+            {/* Print footer */}
+            <div className="print-only" style={{display:'none',textAlign:'center',fontSize:11,color:'#888',marginTop:20,paddingTop:12,borderTop:'1px solid #e2e8f0'}}>
+              Generated by LMS Pro · {new Date().toLocaleDateString()} · {user?.name} ({user?.email})
             </div>
-          </>
+          </div>
         )}
       </main>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      <style>{`
+        @media print {
+          /* Hide sidebar and header buttons */
+          aside,
+          .no-print { display: none !important; }
+
+          /* Show print-only elements */
+          .print-only { display: block !important; }
+
+          /* Reset layout so main fills full page */
+          body, html { margin: 0; padding: 0; background: #fff !important; }
+          #root { display: block !important; }
+          #root > div { display: block !important; }
+
+          /* Main content area */
+          main {
+            display: block !important;
+            padding: 20px !important;
+            width: 100% !important;
+            overflow: visible !important;
+          }
+
+          /* Header action buttons (Refresh / Download PDF) */
+          main > div:first-child button { display: none !important; }
+
+          /* Cards and content */
+          div { break-inside: avoid; }
+
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };
-
 export default WeeklyReportPage;

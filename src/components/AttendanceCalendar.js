@@ -9,6 +9,14 @@ const API    = 'http://localhost:5000';
 
 const isSunday = (dateStr) => new Date(dateStr + 'T00:00:00').getDay() === 0;
 
+// ── Safe normalize: always return an array ──────────────────────────────────
+const toArray = (val) => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'object') return [val];   // single attendance object
+  return [];
+};
+
 export default function AttendanceCalendar() {
   const { user, token } = useAuth();
   const navigate        = useNavigate();
@@ -22,14 +30,12 @@ export default function AttendanceCalendar() {
   const [loading,      setLoading]      = useState(false);
   const [expiredModal, setExpiredModal] = useState(false);
 
-  // Real stats from backend (streak, overall attendance)
   const [backendStats, setBackendStats] = useState({ attendancePercentage: 0, present: 0, absent: 0, total: 0, currentStreak: 0 });
 
   const gridRef  = useRef(null);
   const courseId = user?.enrolledCourse;
   const headers  = { Authorization: `Bearer ${token}` };
 
-  // Load backend stats (streak etc)
   const loadBackendStats = async () => {
     try {
       const res = await axios.get(`${API}/api/attendance/stats`, { headers });
@@ -41,12 +47,31 @@ export default function AttendanceCalendar() {
     if (courseId) { loadMonthData(); loadBackendStats(); }
   }, [currentMonth, currentYear, courseId]);
 
-  // Auto-refresh when attendance marked from CoursePage
   useEffect(() => {
     const handler = () => { loadMonthData(); loadBackendStats(); };
     window.addEventListener('attendance-marked', handler);
-    return () => window.removeEventListener('attendance-marked', handler);
+    window.addEventListener('assignment-submitted', handler);
+    return () => {
+      window.removeEventListener('attendance-marked', handler);
+      window.removeEventListener('assignment-submitted', handler);
+    };
   }, [courseId, currentMonth, currentYear]);
+
+  // Real-time socket: reload when admin marks attendance
+  useEffect(() => {
+    if (!user) return;
+    let s;
+    try {
+      const { io } = require('socket.io-client');
+      s = io(API, { transports: ['websocket'] });
+      s.emit('join', { userId: user._id || user.id });
+      s.on('attendance-update', (data) => {
+        loadMonthData();
+        loadBackendStats();
+      });
+    } catch(e) {}
+    return () => { try { s?.disconnect(); } catch(e) {} };
+  }, [user]);
 
   const getDaysInMonth = () => {
     const firstDay  = new Date(currentYear, currentMonth, 1).getDay();
@@ -75,24 +100,28 @@ export default function AttendanceCalendar() {
       await Promise.all(
         Array.from({ length: totalDays }, (_, i) => i + 1).map(async (day) => {
           const dateStr = formatDate(day);
+
           if (isSunday(dateStr)) {
             result[dateStr] = { status: 'sunday', att: [], sub: null, cls: null };
             return;
           }
-          // Skip future dates — no data to fetch
-          const cellDate = new Date(dateStr + 'T00:00:00');
+
+          const cellDate    = new Date(dateStr + 'T00:00:00');
           const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
           if (cellDate > todayMidnight) {
             result[dateStr] = { status: 'future', att: [], sub: null, cls: null };
             return;
           }
+
           try {
             const [attRes, subRes, clsRes] = await Promise.all([
               axios.get(`${API}/api/attendance/${user._id}/${dateStr}`, { headers }),
               axios.get(`${API}/api/submissions/${user._id}/${dateStr}`, { headers }),
               axios.get(`${API}/api/classes/date/${courseId}/${dateStr}`, { headers }),
             ]);
-            const att = attRes.data || [];
+
+            // ── KEY FIX: always normalize to array ──
+            const att = toArray(attRes.data);
             const sub = subRes.data;
             const cls = clsRes.data;
 
@@ -102,7 +131,6 @@ export default function AttendanceCalendar() {
               if (!present) {
                 status = 'absent';
               } else {
-                // complete = assignment submitted; pending = present but not yet submitted
                 status = (sub && sub.status === 'submitted') ? 'complete' : 'pending';
               }
             }
@@ -120,13 +148,12 @@ export default function AttendanceCalendar() {
     }
   };
 
-  // Month-level stats (from dateData for this month only)
   const getMonthStats = () => {
     const values      = Object.values(dateData).filter(d => d.status !== 'sunday');
     const presentDays = values.filter(d => d.status === 'complete' || d.status === 'pending').length;
     const absentDays  = values.filter(d => d.status === 'absent').length;
     const doneDays    = values.filter(d => d.status === 'complete').length;
-    const classDays   = presentDays + absentDays; // days with actual attendance records
+    const classDays   = presentDays + absentDays;
     const attendPct   = classDays > 0 ? Math.round((presentDays / classDays) * 100) : 0;
     const completePct = presentDays > 0 ? Math.round((doneDays / presentDays) * 100) : 0;
     return { presentDays, absentDays, doneDays, classDays, attendPct, completePct };
@@ -162,14 +189,19 @@ export default function AttendanceCalendar() {
     else setCurrentMonth(m => m + 1);
   };
 
-  const days    = getDaysInMonth();
-  const numRows = Math.ceil(days.length / 7);
+  const days       = getDaysInMonth();
+  const numRows    = Math.ceil(days.length / 7);
   const hoveredStr = hoveredDate ? formatDate(hoveredDate) : null;
   const hData      = hoveredStr ? dateData[hoveredStr] : null;
 
   const renderTooltip = () => {
     if (!hData) return null;
-    const { status, att, sub, cls } = hData;
+
+    // ── KEY FIX: always normalize att to array here too ──
+    const status = hData.status;
+    const att    = toArray(hData.att);   // safe — never crashes even if undefined
+    const sub    = hData.sub;
+    const cls    = hData.cls;
 
     const tooltipStyle = {
       position: 'absolute',
@@ -192,8 +224,8 @@ export default function AttendanceCalendar() {
       );
     }
 
-    const color     = statusColor(status) || '#64748b';
-    const present   = att.some(a => a.status === 'present');
+    const color      = statusColor(status) || '#64748b';
+    const present    = att.length > 0 && att.some(a => a.status === 'present');
     const hovDateObj = new Date(hoveredStr + 'T00:00:00');
     const todayMid   = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const hovMid     = new Date(hovDateObj.getFullYear(), hovDateObj.getMonth(), hovDateObj.getDate());
@@ -203,9 +235,9 @@ export default function AttendanceCalendar() {
     const classLabel = !cls ? '○ No Class' : isHovToday ? '🟢 Active Class' : isHovPast ? '⏹ Expired' : '🔜 Upcoming';
     const classColor = !cls ? '#64748b' : isHovToday ? '#10b981' : isHovPast ? '#f59e0b' : '#3b82f6';
 
-    const secAAnswered = sub?.secA?.answered ?? 0;
-    const secBAnswered = sub?.secB?.answered ?? 0;
-    const secCAnswered = sub?.secC?.answered ?? 0;
+    const secAAnswered = (sub?.secA?.answers || []).filter(a => a.isAnswered).length;
+    const secBAnswered = (sub?.secB?.answers || []).filter(a => a.isAnswered).length;
+    const secCAnswered = (sub?.secC?.answers || []).filter(a => a.isAnswered).length;
     const secATotal    = sub?.secA?.total ?? 20;
     const secBTotal    = sub?.secB?.total ?? 20;
     const secCTotal    = sub?.secC?.total ?? 10;
@@ -241,7 +273,7 @@ export default function AttendanceCalendar() {
                     <span style={{ fontSize: 10, color: sec.color, fontWeight: 700 }}>{sec.answered}/{sec.total}</span>
                   </div>
                   <div style={{ height: 4, background: '#1e293b', borderRadius: 4 }}>
-                    <div style={{ height: '100%', borderRadius: 4, background: sec.color, width: `${Math.min((sec.answered/sec.total)*100, 100)}%` }} />
+                    <div style={{ height: '100%', borderRadius: 4, background: sec.color, width: `${Math.min((sec.answered / sec.total) * 100, 100)}%` }} />
                   </div>
                 </div>
               ))}
@@ -270,7 +302,7 @@ export default function AttendanceCalendar() {
         <button style={s.navBtn} onClick={nextMonth}>›</button>
       </div>
 
-      {/* Stats bar — all from backend for consistency */}
+      {/* Stats bar */}
       <div style={s.statsBar}>
         <div style={s.statCard}>
           <div style={s.statRing}>
@@ -342,11 +374,11 @@ export default function AttendanceCalendar() {
             const todayCell = isToday(day);
             const hovered   = hoveredDate === day;
 
-            const cellMid   = new Date(dateStr + 'T00:00:00');
-            const todayMid  = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const isCellToday = cellMid.getTime() === todayMid.getTime();
-            const isCellPast  = cellMid < todayMid;
-            const hasClass    = !!data?.cls;
+            const cellMid      = new Date(dateStr + 'T00:00:00');
+            const todayMid     = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const isCellToday  = cellMid.getTime() === todayMid.getTime();
+            const isCellPast   = cellMid < todayMid;
+            const hasClass     = !!data?.cls;
             const classDotColor = !hasClass ? null : isCellToday ? '#10b981' : isCellPast ? '#f59e0b' : null;
 
             if (isSun) {
@@ -359,7 +391,6 @@ export default function AttendanceCalendar() {
               );
             }
 
-            // Future dates — grayed out, not clickable
             if (status === 'future') {
               return (
                 <div key={dateStr} style={{ borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#c8d0db', cursor: 'default', minHeight: 0, opacity: 0.45 }}>
@@ -372,14 +403,16 @@ export default function AttendanceCalendar() {
             const textColor = todayCell ? '#fff'    : color ? '#fff'     : hovered ? '#1e3a5f' : '#475569';
 
             return (
-              <div key={dateStr} style={{ borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', userSelect: 'none', background: bg, color: textColor, transform: hovered ? 'scale(1.08)' : 'scale(1)', boxShadow: hovered ? '0 8px 24px rgba(0,0,0,0.20)' : color ? '0 2px 8px rgba(0,0,0,0.10)' : 'none', zIndex: hovered ? 10 : 1, transition: 'transform 0.15s ease, box-shadow 0.15s ease', minHeight: 0 }}
+              <div key={dateStr}
+                style={{ borderRadius: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', userSelect: 'none', background: bg, color: textColor, transform: hovered ? 'scale(1.08)' : 'scale(1)', boxShadow: hovered ? '0 8px 24px rgba(0,0,0,0.20)' : color ? '0 2px 8px rgba(0,0,0,0.10)' : 'none', zIndex: hovered ? 10 : 1, transition: 'transform 0.15s ease, box-shadow 0.15s ease', minHeight: 0 }}
                 onMouseEnter={(e) => handleMouseEnter(day, e)}
                 onClick={() => navigate(`/assignment/${dateStr}`)}>
                 <span style={{ fontSize: 15, fontWeight: todayCell ? 700 : 500, lineHeight: 1 }}>{day}</span>
-                {!hovered && color     && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.6)', marginTop: 3 }}/>}
+                {!hovered && color      && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.6)', marginTop: 3 }}/>}
                 {!hovered && !color && classDotColor && <span style={{ width: 5, height: 5, borderRadius: '50%', background: classDotColor, marginTop: 3 }}/>}
                 {hovered && hasClass && (
-                  <div onClick={(e) => { e.stopPropagation(); if (isCellPast) setExpiredModal(true); else navigate('/courses'); }}
+                  <div
+                    onClick={(e) => { e.stopPropagation(); if (isCellPast) setExpiredModal(true); else navigate('/courses'); }}
                     style={{ marginTop: 3, width: 18, height: 18, background: isCellPast ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, color: '#fff', border: `1px solid ${isCellPast ? 'rgba(239,68,68,0.6)' : 'rgba(255,255,255,0.5)'}` }}>▶</div>
                 )}
               </div>

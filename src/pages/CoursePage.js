@@ -1,48 +1,118 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
-const API = 'http://localhost:5000';
-
+const API = process.env.REACT_APP_API_URL || "";
 export default function CoursePage() {
   const { user, token } = useAuth();
   const { isDark, toggleTheme, theme } = useTheme();
-  const navigate = useNavigate();
-  const headers = { Authorization: `Bearer ${token}` };
-  const videoRef = useRef(null);
+  const navigate  = useNavigate();
+  const headers   = { Authorization: `Bearer ${token}` };
+  const videoRef  = useRef(null);
 
-  const [dailyClass, setDailyClass] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [dailyClass,  setDailyClass]  = useState(null);
+  const [loading,     setLoading]     = useState(true);
   const [classStatus, setClassStatus] = useState('active');
-  const [attendanceMarked, setAttendanceMarked] = useState(false);
-  const [attendanceStatus, setAttendanceStatus] = useState(null);
+  const [courseId,    setCourseId]    = useState(user?.enrolledCourse || null);
+  const [alreadyOpened, setAlreadyOpened] = useState(false); // true = this trainee already opened this class
+  const [attendanceDeadline, setAttendanceDeadline] = useState(null); // ISO string
+  const [attStatus,   setAttStatus]   = useState('not_marked'); // trainee's attendance status
 
-  const courseId = user?.enrolledCourse;
+  // Activity tracking state
+  const [activitySent, setActivitySent] = useState(false); // "opened" event sent
+  const watchIntervalRef = useRef(null);
+  const lastReportedRef  = useRef(0); // last watchedSeconds we sent to server
+
   const todayStr = new Date().toISOString().split('T')[0];
 
+  // Auto-fetch enrolledCourse if missing
   useEffect(() => {
-    loadTodayClass();
-    checkAttendanceAlreadyMarked();
+    if (!courseId && user?._id) {
+      api.get(`${API}/api/courses/${user._id}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => {
+          const list = res.data || [];
+          if (list.length > 0) setCourseId(list[0]._id);
+        }).catch(() => {});
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (courseId) {
+      loadTodayClass();
+    } else {
+      setLoading(false);
+    }
+  }, [courseId]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIntervalRef.current) clearInterval(watchIntervalRef.current);
+    };
   }, []);
+
+  // Real-time: listen for admin marking attendance
+  useEffect(() => {
+    if (!user) return;
+    let s;
+    try {
+      const { io } = require('socket.io-client');
+      s = io('', { transports: ['websocket'] });
+      s.emit('join', { userId: user._id || user.id });
+      s.on('attendance-update', (data) => {
+        if (data.date === todayStr) {
+          setAttStatus(data.status);
+          // Fire browser notification
+          if (Notification.permission === 'granted') {
+            new Notification('✅ Attendance Marked!', {
+              body: data.status === 'present'
+                ? `Your attendance for ${data.date} has been marked Present. Keep it up! 🔥`
+                : `Your attendance for ${data.date} has been marked Absent.`,
+              icon: '/favicon.ico',
+            });
+          }
+          window.dispatchEvent(new Event('attendance-marked'));
+        }
+      });
+    } catch(e) {}
+    return () => { try { s?.disconnect(); } catch(e) {} };
+  }, [user, todayStr]);
 
   const loadTodayClass = async () => {
     try {
       setLoading(true);
       let res;
-      try {
-        res = await axios.get(`${API}/api/classes/today/${courseId}`, { headers });
-      } catch {
-        res = await axios.get(`${API}/api/classes/today`, { headers });
-      }
+      try { res = await api.get(`${API}/api/classes/today/${courseId}`, { headers }); }
+      catch { res = await api.get(`${API}/api/classes/today`, { headers }); }
       const cls = res.data;
       setDailyClass(cls);
-      if (cls && cls.date) {
+      if (cls?.date) {
         const clsDate = cls.date.split('T')[0];
         if (clsDate < todayStr) setClassStatus('expired');
         else if (clsDate > todayStr) setClassStatus('upcoming');
         else setClassStatus('active');
+      }
+
+      // Fetch today's attendance status + deadline info
+      try {
+        const statusRes = await api.get(`${API}/api/attendance/today-status`, { headers });
+        setAttendanceDeadline(statusRes.data.attendanceDeadline);
+        setAttStatus(statusRes.data.status);
+        setAlreadyOpened(statusRes.data.opened);
+
+        // If already opened previously — do NOT send opened again, do NOT allow re-open
+        if (statusRes.data.opened) {
+          // Class was already opened before — just track watch time, don't re-trigger open
+          return; // skip the sendActivity(opened: true) below
+        }
+      } catch (e) { /* non-critical */ }
+
+      // First time opening this class — mark as opened
+      if (cls && cls._id && cls.date?.split('T')[0] === todayStr) {
+        sendActivity(cls._id, { opened: true });
+        setAlreadyOpened(true);
       }
     } catch (err) {
       console.error('Failed to load class', err);
@@ -51,34 +121,67 @@ export default function CoursePage() {
     }
   };
 
-  const checkAttendanceAlreadyMarked = async () => {
+  // Send activity data to server
+  const sendActivity = async (classId, extra = {}) => {
     try {
-      const res = await axios.get(`${API}/api/attendance/${user._id}/${todayStr}`, { headers });
-      const records = res.data || [];
-      if (records.some(r => r.status === 'present')) {
-        setAttendanceMarked(true);
-        setAttendanceStatus('already');
-      }
-    } catch (e) {}
+      const vid = videoRef.current;
+      const watchedSeconds = vid ? Math.floor(vid.currentTime) : 0;
+      const classDuration  = vid && vid.duration && !isNaN(vid.duration) ? Math.floor(vid.duration) : 0;
+
+      await api.post(`${API}/api/attendance/track-activity`, {
+        classId,
+        courseId,
+        date: todayStr,
+        watchedSeconds,
+        classDuration,
+        ...extra,
+      }, { headers });
+    } catch (e) {
+      // Silently fail — don't interrupt student
+    }
   };
 
-  const handleVideoPlay = async () => {
-    if (attendanceMarked || classStatus !== 'active') return;
-    try {
-      setAttendanceStatus('marking');
-      await axios.post(`${API}/api/attendance/mark`, {
-        studentId: user._id,
-        courseId: courseId,
-        date: todayStr,
-        status: 'present',
-      }, { headers });
-      setAttendanceMarked(true);
-      setAttendanceStatus('done');
-      window.dispatchEvent(new Event('attendance-marked'));
-    } catch (err) {
-      console.error('Attendance mark failed', err);
-      setAttendanceStatus('error');
+  // When video starts playing — mark opened + start periodic reporting
+  const handleVideoPlay = () => {
+    if (!dailyClass?._id || classStatus !== 'active') return;
+
+    if (!activitySent) {
+      sendActivity(dailyClass._id, { opened: true });
+      setActivitySent(true);
     }
+
+    // Report progress every 15 seconds while playing
+    if (!watchIntervalRef.current) {
+      watchIntervalRef.current = setInterval(() => {
+        const vid = videoRef.current;
+        if (!vid) return;
+        const watched = Math.floor(vid.currentTime);
+        // Only send if meaningfully different from last report
+        if (watched - lastReportedRef.current >= 10) {
+          lastReportedRef.current = watched;
+          sendActivity(dailyClass._id);
+        }
+      }, 15000);
+    }
+  };
+
+  // Stop interval when paused
+  const handleVideoPause = () => {
+    if (watchIntervalRef.current) {
+      clearInterval(watchIntervalRef.current);
+      watchIntervalRef.current = null;
+    }
+    // Send final progress on pause
+    if (dailyClass?._id) sendActivity(dailyClass._id);
+  };
+
+  // Final report when video ends
+  const handleVideoEnded = () => {
+    if (watchIntervalRef.current) {
+      clearInterval(watchIntervalRef.current);
+      watchIntervalRef.current = null;
+    }
+    if (dailyClass?._id) sendActivity(dailyClass._id);
   };
 
   const handleContextMenu = (e) => e.preventDefault();
@@ -91,6 +194,19 @@ export default function CoursePage() {
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
+  const navItems = [
+    { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
+    { icon: '📅', label: 'Attendance',    path: '/attendance' },
+    { icon: '🎥', label: 'Classes',       path: '/courses', active: true },
+    { icon: '📚', label: 'My Course',     path: '/my-course' },
+    { icon: '📝', label: 'Assignments',   path: `/assignment/${todayStr}` },
+    { icon: '🔔', label: 'Notifications', path: '/notifications' },
+    { icon: '📊', label: 'Analytics',     path: '/analytics' },
+    { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
+    { icon: '👤', label: 'Profile',       path: '/profile' },
+    { icon: '💬', label: 'Group Chat',    path: courseId ? `/chat/${courseId}` : '/courses' },
+  ];
+
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: theme.pageBg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
       {/* Sidebar */}
@@ -100,16 +216,7 @@ export default function CoursePage() {
           <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>LMS Pro</span>
         </div>
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
-          {[
-            { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
-            { icon: '📅', label: 'Attendance',    path: '/attendance' },
-            { icon: '🎥', label: 'Classes',       path: '/courses', active: true },
-            { icon: '📝', label: 'Assignments',   path: `/assignment/${todayStr}` },
-            { icon: '🔔', label: 'Notifications', path: '/notifications' },
-            { icon: '📊', label: 'Analytics',     path: '/analytics' },
-          { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
-            { icon: '👤', label: 'Profile',       path: '/profile' },
-          ].map(item => (
+          {navItems.map(item => (
             <button key={item.label}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: 'none', background: item.active ? theme.navActiveBg : 'transparent', color: item.active ? theme.navActiveColor : theme.navInactiveColor, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%' }}
               onClick={() => navigate(item.path)}>
@@ -132,24 +239,15 @@ export default function CoursePage() {
 
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 24, overflow: 'auto', background: theme.pageBg }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ color: theme.textPrimary, fontSize: 22, fontWeight: 700, margin: 0 }}>📺 Today's Class</h2>
-          <span style={{ background: theme.accent, color: '#fff', padding: '6px 16px', borderRadius: 20, fontSize: 13 }}>MERN Stack Developer</span>
+          <button
+            onClick={() => navigate('/my-course')}
+            style={{ background: 'linear-gradient(135deg,#7c6af5,#00d4aa)', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            📚 View My Course
+          </button>
         </div>
-
-        {attendanceStatus && (
-          <div style={{
-            padding: '10px 16px', borderRadius: 10, border: '1px solid', fontSize: 13, fontWeight: 600, marginBottom: 16,
-            background: attendanceStatus === 'done' ? '#10b98122' : attendanceStatus === 'already' ? '#3b82f622' : attendanceStatus === 'marking' ? '#f59e0b22' : '#ef444422',
-            borderColor: attendanceStatus === 'done' ? '#10b981' : attendanceStatus === 'already' ? '#3b82f6' : attendanceStatus === 'marking' ? '#f59e0b' : '#ef4444',
-            color: attendanceStatus === 'done' ? '#10b981' : attendanceStatus === 'already' ? '#3b82f6' : attendanceStatus === 'marking' ? '#f59e0b' : '#ef4444',
-          }}>
-            {attendanceStatus === 'done'    && '✅ Attendance marked — You are present today!'}
-            {attendanceStatus === 'already' && '✅ Already marked present for today'}
-            {attendanceStatus === 'marking' && '⏳ Marking attendance...'}
-            {attendanceStatus === 'error'   && '❌ Could not mark attendance — please try again'}
-          </div>
-        )}
 
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
@@ -170,10 +268,74 @@ export default function CoursePage() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 12, background: theme.hoverBg, color: theme.textSecondary, padding: '4px 12px', borderRadius: 20 }}>📅 {dailyClass.date}</span>
                   <span style={{ fontSize: 12, background: theme.hoverBg, color: theme.textSecondary, padding: '4px 12px', borderRadius: 20 }}>⏰ Expires at midnight</span>
-                  {classStatus === 'active' && <span style={{ fontSize: 12, background: '#E1F5EE', color: '#1D9E75', padding: '4px 12px', borderRadius: 20 }}>🔴 Live now</span>}
-                  {!attendanceMarked && classStatus === 'active' && <span style={{ fontSize: 12, background: '#fef3c7', color: '#92400e', padding: '4px 12px', borderRadius: 20 }}>▶ Play video to mark attendance</span>}
-                  {attendanceMarked && <span style={{ fontSize: 12, background: '#d1fae5', color: '#065f46', padding: '4px 12px', borderRadius: 20 }}>✅ Present marked</span>}
+                  {classStatus === 'active' && (
+                    <span style={{ fontSize: 12, background: '#E1F5EE', color: '#1D9E75', padding: '4px 12px', borderRadius: 20 }}>🔴 Live now</span>
+                  )}
+                  <span style={{ fontSize: 12, background: '#ede9fe', color: '#7c6af5', padding: '4px 12px', borderRadius: 20 }}>
+                    👁 Your watch time is being tracked for attendance
+                  </span>
+                  {courseId && (
+                    <button onClick={() => navigate(`/chat/${courseId}`)}
+                      style={{ fontSize: 12, background: 'linear-gradient(135deg,#7c6af520,#00d4aa20)', color: '#7c6af5', border: '1px solid #7c6af540', padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      💬 Group Chat
+                    </button>
+                  )}
                 </div>
+
+                {/* ── Attendance Status Banner ── */}
+                <div style={{ marginTop: 12, borderRadius: 10, overflow: 'hidden' }}>
+                  {attStatus === 'present' ? (
+                    <div style={{ background: '#e6f7f2', border: '1.5px solid #1D9E75', borderRadius: 10, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 20 }}>✅</span>
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#1D9E75', fontSize: 14 }}>Attendance Marked — Present</div>
+                        <div style={{ fontSize: 12, color: '#555' }}>Your attendance for today has been confirmed. Great job! 🔥</div>
+                      </div>
+                    </div>
+                  ) : attStatus === 'absent' ? (
+                    <div style={{ background: '#fdecea', border: '1.5px solid #e74c3c', borderRadius: 10, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 20 }}>❌</span>
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#e74c3c', fontSize: 14 }}>Attendance Marked — Absent</div>
+                        <div style={{ fontSize: 12, color: '#555' }}>Your attendance was marked absent. Contact admin if this is incorrect.</div>
+                      </div>
+                    </div>
+                  ) : attendanceDeadline ? (
+                    (() => {
+                      const deadlineDate = new Date(attendanceDeadline);
+                      const isPast = new Date() > deadlineDate;
+                      return (
+                        <div style={{ background: isPast ? '#fff8e1' : '#f0f4ff', border: `1.5px solid ${isPast ? '#f5a623' : '#185FA5'}`, borderRadius: 10, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: 20 }}>{isPast ? '⌛' : '🕐'}</span>
+                          <div>
+                            <div style={{ fontWeight: 700, color: isPast ? '#e67e22' : '#185FA5', fontSize: 14 }}>
+                              {isPast ? 'Attendance Pending — Admin will mark soon' : 'Attendance Not Yet Marked'}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#555' }}>
+                              {isPast
+                                ? `Deadline passed at ${deadlineDate.toLocaleString('en-IN', { hour: '2-digit', minute: '2-digit' })}. Admin is reviewing attendance.`
+                                : `Your attendance will be marked after ${deadlineDate.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}. Watch the full class!`}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 18 }}>📋</span>
+                      <div style={{ fontSize: 13, color: '#64748b' }}>
+                        <strong>Attendance not yet marked.</strong> Your watch time is being tracked. Admin will mark attendance after the class deadline.
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Already opened warning */}
+                {alreadyOpened && classStatus === 'active' && (
+                  <div style={{ marginTop: 8, background: '#fff8e1', border: '1px solid #ffe0b2', borderRadius: 8, padding: '8px 14px', fontSize: 12, color: '#e67e22' }}>
+                    ℹ️ You already opened this class. Your first open time was recorded for attendance. Re-opening is tracked but only the first open counts.
+                  </div>
+                )}
               </div>
 
               <div style={{ position: 'relative', background: '#000', userSelect: 'none' }} onContextMenu={handleContextMenu}>
@@ -188,15 +350,20 @@ export default function CoursePage() {
                 ) : classStatus === 'upcoming' ? (
                   <div style={{ width: '100%', minHeight: '40vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0f172a', padding: '40px 24px', textAlign: 'center' }}>
                     <div style={{ fontSize: 48, marginBottom: 16 }}>🔜</div>
-                    <div style={{ color: '#ef4444', fontSize: 18, fontWeight: 700, marginBottom: 10 }}>Class Not Yet Active</div>
+                    <div style={{ color: '#f59e0b', fontSize: 18, fontWeight: 700, marginBottom: 10 }}>Class Not Yet Active</div>
                     <div style={{ color: '#94a3b8', fontSize: 13, lineHeight: 1.6, maxWidth: 300 }}>This class will be available on its scheduled date.</div>
                   </div>
                 ) : (
-                  <video ref={videoRef} style={{ width: '100%', maxHeight: '60vh', display: 'block' }} controls
+                  <video
+                    ref={videoRef}
+                    style={{ width: '100%', maxHeight: '60vh', display: 'block' }}
+                    controls
                     controlsList="nodownload nofullscreen noremoteplayback"
                     disablePictureInPicture
                     onContextMenu={handleContextMenu}
                     onPlay={handleVideoPlay}
+                    onPause={handleVideoPause}
+                    onEnded={handleVideoEnded}
                     src={`${API}/api/classes/stream/${dailyClass._id}`}>
                     Your browser does not support video.
                   </video>

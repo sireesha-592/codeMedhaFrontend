@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import api from '../api';
 
-const API = 'http://localhost:5000';
-
+const API = process.env.REACT_APP_API_URL || "";
 const medal = (rank) => {
   if (rank === 1) return '🥇';
   if (rank === 2) return '🥈';
@@ -28,7 +27,7 @@ const LeaderboardPage = () => {
   const fetchLeaderboard = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`${API}/api/submissions/leaderboard`, {
+      const res = await api.get(`${API}/api/submissions/leaderboard`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setData(res.data.leaderboard || []);
@@ -60,11 +59,13 @@ const LeaderboardPage = () => {
           { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
           { icon: '📅', label: 'Attendance',    path: '/attendance' },
           { icon: '🎥', label: 'Classes',       path: '/courses' },
+          { icon: '📚', label: 'My Course',     path: '/my-course' },
           { icon: '📝', label: 'Assignments',   path: '/assignments' },
           { icon: '🔔', label: 'Notifications', path: '/notifications' },
           { icon: '📊', label: 'Analytics',     path: '/analytics' },
           { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard', active: true },
           { icon: '👤', label: 'Profile',       path: '/profile' },
+          { icon: '💬', label: 'Group Chat',    path: user?.enrolledCourse ? `/chat/${user.enrolledCourse}` : '/courses' },
         ].map(item => (
           <button key={item.path}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: 'none', background: item.active ? theme.navActiveBg : 'transparent', color: item.active ? theme.navActiveColor : theme.navInactiveColor, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%' }}

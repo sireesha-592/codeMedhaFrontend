@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSocket } from '../hooks/useSocket';
-import axios from 'axios';
+import api from '../api';
 
-const API = 'http://localhost:5000';
-
+const API = process.env.REACT_APP_API_URL || "";
 const AnalyticsPage = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { isDark, toggleTheme, theme } = useTheme();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
@@ -19,12 +18,12 @@ const AnalyticsPage = () => {
 
   const fetchAnalytics = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const tok = token || localStorage.getItem('lms_token_student') || localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${tok}` };
 
       const [attRes, subRes] = await Promise.allSettled([
-        axios.get(`${API}/api/attendance/stats`, { headers }),
-        axios.get(`${API}/api/submissions/all`, { headers }),
+        api.get(`${API}/api/attendance/stats`, { headers }),
+        api.get(`${API}/api/submissions/all`, { headers }),
       ]);
 
       let attData = {}, subList = [];
@@ -322,12 +321,14 @@ const AnalyticsPage = () => {
           { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
           { icon: '📅', label: 'Attendance',    path: '/attendance' },
           { icon: '🎥', label: 'Classes',       path: '/courses' },
+          { icon: '📚', label: 'My Course',     path: '/my-course' },
           { icon: '📝', label: 'Assignments',   path: '/assignments' },
           { icon: '🔔', label: 'Notifications', path: '/notifications' },
           { icon: '📊', label: 'Analytics',     path: '/analytics', active: true },
           { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
           { icon: '📅', label: 'Weekly Report', path: '/weekly-report' },
           { icon: '👤', label: 'Profile',       path: '/profile' },
+          { icon: '💬', label: 'Group Chat',    path: user?.enrolledCourse ? `/chat/${user.enrolledCourse}` : '/courses' },
         ].map(item => (
           <button key={item.path}
             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: 'none', background: item.active ? theme.navActiveBg : 'transparent', color: item.active ? theme.navActiveColor : theme.navInactiveColor, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%' }}

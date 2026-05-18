@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import api from '../api';
 
 const API = 'http://localhost:5000';
 
@@ -16,53 +16,61 @@ const BADGES = [
 ];
 
 const ProfilePage = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const { isDark, toggleTheme, theme } = useTheme();
   const navigate = useNavigate();
-  const [stats, setStats]             = useState({ attendance: 0, streak: 0, total: 0, present: 0, absent: 0, submitted: 0, pending: 0 });
+  const [stats, setStats]             = useState({ attendance: 0, streak: 0, total: 0, totalClasses: 0, present: 0, absent: 0, submitted: 0, pending: 0 });
   const [earnedBadges, setEarnedBadges] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading]         = useState(true);
   const [activeTab, setActiveTab]     = useState('overview');
+  const [parentName, setParentName]   = useState(user?.parentName  || '');
+  const [parentPhone, setParentPhone] = useState(user?.parentPhone || '');
+  const [savingParent, setSavingParent] = useState(false);
+  const [parentSaved, setParentSaved]   = useState(false);
 
   useEffect(() => { if (user) fetchProfileData(); }, [user]);
 
   const fetchProfileData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
+      const tok = token || localStorage.getItem('lms_token_student') || localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${tok}` };
 
       const [attRes, subRes, classRes] = await Promise.allSettled([
-        axios.get(`${API}/api/attendance/stats`, { headers }),
-        axios.get(`${API}/api/submissions/all`, { headers }),
-        axios.get(`${API}/api/classes/all`, { headers }),
+        api.get(`${API}/api/attendance/stats`, { headers }),
+        api.get(`${API}/api/submissions/all`, { headers }),
+        api.get(`${API}/api/classes/all`, { headers }),
       ]);
 
       let attData = {}, subList = [], classList = [];
-      if (attRes.status  === 'fulfilled') attData   = attRes.value.data;
-      if (subRes.status  === 'fulfilled') subList   = subRes.value.data  || [];
-      if (classRes.status === 'fulfilled') classList = classRes.value.data || [];
+      if (attRes.status  === 'fulfilled') { attData = attRes.value.data; console.log('✅ Attendance data:', attData); }
+      else console.error('❌ Attendance API error:', attRes.reason?.response?.status, attRes.reason?.response?.data || attRes.reason?.message);
+      if (subRes.status  === 'fulfilled') { subList = Array.isArray(subRes.value.data) ? subRes.value.data : []; console.log('✅ Submissions:', subList.length); }
+      else console.error('❌ Submissions API error:', subRes.reason?.response?.data || subRes.reason?.message);
+      if (classRes.status === 'fulfilled') { classList = Array.isArray(classRes.value.data) ? classRes.value.data : []; console.log('✅ Classes:', classList.length); }
+      else console.error('❌ Classes API error:', classRes.reason?.response?.data || classRes.reason?.message);
 
       const submitted = subList.filter(s => s.status === 'submitted').length;
       const pending   = subList.filter(s => s.status !== 'submitted').length;
 
       const s = {
-        attendance: attData.attendancePercentage || 0,
-        streak:     attData.currentStreak || 0,
-        total:      attData.total         || 0,
-        present:    attData.present       || 0,
-        absent:     attData.absent        || 0,
+        attendance:   attData.attendancePercentage || 0,
+        streak:       attData.currentStreak        || 0,
+        total:        attData.total                || 0,   // attendance days (present+absent)
+        totalClasses: classList.length,                     // actual number of class videos uploaded
+        present:      attData.present              || 0,
+        absent:       attData.absent               || 0,
         submitted, pending,
       };
       setStats(s);
 
       const earned = [];
-      if (s.total   >= 1)          earned.push('first_class');
-      if (s.streak  >= 7)          earned.push('week_streak');
-      if (s.attendance === 100)    earned.push('perfect_month');
-      if (submitted  >= 5)         earned.push('assignment_ace');
-      if (s.attendance >= 80)      earned.push('early_bird');
-      if (s.streak  >= 30)         earned.push('consistent');
+      if (s.totalClasses >= 1)       earned.push('first_class');
+      if (s.streak  >= 7)            earned.push('week_streak');
+      if (s.attendance === 100)      earned.push('perfect_month');
+      if (submitted  >= 5)           earned.push('assignment_ace');
+      if (s.attendance >= 80)        earned.push('early_bird');
+      if (s.streak  >= 30)           earned.push('consistent');
       setEarnedBadges(earned);
 
       const activity = [];
@@ -92,6 +100,15 @@ const ProfilePage = () => {
   };
 
   const handleLogout = () => { logout(); navigate('/login'); };
+  const saveParentDetails = async () => {
+    try {
+      setSavingParent(true);
+      const tok = token || localStorage.getItem('lms_token_student') || localStorage.getItem('token');
+      await api.put(`${API}/api/auth/update`, { parentName, parentPhone }, { headers: { Authorization: `Bearer ${tok}` } });
+      setParentSaved(true);
+      setTimeout(() => setParentSaved(false), 2500);
+    } catch (e) { alert('Failed to save'); } finally { setSavingParent(false); }
+  };
   const attPercent = Math.round(stats.attendance);
 
   if (loading) {
@@ -116,11 +133,13 @@ const ProfilePage = () => {
             { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
             { icon: '📅', label: 'Attendance',    path: '/attendance' },
             { icon: '🎥', label: 'Classes',       path: '/courses' },
+          { icon: '📚', label: 'My Course',     path: '/my-course' },
             { icon: '📝', label: 'Assignments',   path: '/assignments' },
             { icon: '🔔', label: 'Notifications', path: '/notifications' },
             { icon: '📊', label: 'Analytics',     path: '/analytics' },
           { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
             { icon: '👤', label: 'Profile',       path: '/profile', active: true },
+            { icon: '💬', label: 'Group Chat',    path: user?.enrolledCourse ? `/chat/${user.enrolledCourse}` : '/courses' },
           ].map(item => (
             <button key={item.path}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: 'none', background: item.active ? theme.navActiveBg : 'transparent', color: item.active ? theme.navActiveColor : theme.navInactiveColor, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%' }}
@@ -169,7 +188,7 @@ const ProfilePage = () => {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 4, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 4, width: 'fit-content' }}>
-          {['overview', 'badges', 'activity'].map(tab => (
+          {['overview', 'parent', 'badges', 'activity'].map(tab => (
             <button key={tab}
               style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: activeTab === tab ? theme.hoverBg : 'transparent', color: activeTab === tab ? theme.textPrimary : theme.textMuted, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
               onClick={() => setActiveTab(tab)}>
@@ -184,7 +203,7 @@ const ProfilePage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
               {[
                 { label: 'Attendance',    value: `${attPercent}%`,     icon: '📅', color: theme.accent },
-                { label: 'Total Classes', value: stats.total,           icon: '🎥', color: theme.accentPurple },
+                { label: 'Total Classes', value: stats.totalClasses,    icon: '🎥', color: theme.accentPurple },
                 { label: 'Streak',        value: `${stats.streak} 🔥`, icon: '⚡', color: theme.accentOrange },
                 { label: 'Submitted',     value: stats.submitted,       icon: '✅', color: '#f56aa0' },
               ].map((s, i) => (
@@ -232,6 +251,48 @@ const ProfilePage = () => {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Parent Details */}
+        {activeTab === 'parent' && (
+          <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: '24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: theme.textSecondary }}>👨‍👩‍👦 Parent / Guardian Details</div>
+            <p style={{ fontSize: 13, color: theme.textMuted, margin: 0 }}>
+              These details are used by admin to send attendance notifications and weekly performance reports to your parents via WhatsApp.
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Parent / Guardian Name</label>
+                <input
+                  value={parentName}
+                  onChange={e => setParentName(e.target.value)}
+                  placeholder="e.g. Rajesh Kumar"
+                  style={{ padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${theme.border}`, background: theme.pageBg, color: theme.textPrimary, fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Parent WhatsApp Number</label>
+                <input
+                  value={parentPhone}
+                  onChange={e => setParentPhone(e.target.value)}
+                  placeholder="e.g. 9876543210"
+                  style={{ padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${theme.border}`, background: theme.pageBg, color: theme.textPrimary, fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+                />
+              </div>
+            </div>
+            <button
+              onClick={saveParentDetails}
+              disabled={savingParent}
+              style={{ alignSelf: 'flex-start', padding: '10px 24px', borderRadius: 10, border: 'none', background: theme.accent, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            >
+              {savingParent ? '⏳ Saving...' : parentSaved ? '✅ Saved!' : '💾 Save Details'}
+            </button>
+            {parentName && parentPhone && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #10b981', borderRadius: 10, padding: '12px 16px', fontSize: 13, color: '#065f46' }}>
+                ✅ Parent details saved — admin will send attendance & weekly reports to <strong>{parentPhone}</strong>
+              </div>
+            )}
           </div>
         )}
 

@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import api from '../api';
 
-const API = 'http://localhost:5000';
-
+const API = process.env.REACT_APP_API_URL || "";
 const NotificationsPage = () => {
   const { user } = useAuth();
   const { isDark, toggleTheme, theme } = useTheme();
@@ -22,8 +21,8 @@ const NotificationsPage = () => {
       const headers = { Authorization: `Bearer ${token}` };
 
       const [classRes, subRes] = await Promise.allSettled([
-        axios.get(`${API}/api/classes/all`, { headers }),
-        axios.get(`${API}/api/submissions/all`, { headers }),
+        api.get(`${API}/api/classes/all`, { headers }),
+        api.get(`${API}/api/submissions/all`, { headers }),
       ]);
 
       const notifs = [];
@@ -129,11 +128,13 @@ const NotificationsPage = () => {
             { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
             { icon: '📅', label: 'Attendance',    path: '/attendance' },
             { icon: '🎥', label: 'Classes',       path: '/courses' },
+            { icon: '📚', label: 'My Course',     path: '/my-course' },
             { icon: '📝', label: 'Assignments',   path: '/assignments' },
             { icon: '🔔', label: 'Notifications', path: '/notifications', active: true },
             { icon: '📊', label: 'Analytics',     path: '/analytics' },
           { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
             { icon: '👤', label: 'Profile',       path: '/profile' },
+            { icon: '💬', label: 'Group Chat',    path: user?.enrolledCourse ? `/chat/${user.enrolledCourse}` : '/courses' },
           ].map(item => (
             <button
               key={item.path}

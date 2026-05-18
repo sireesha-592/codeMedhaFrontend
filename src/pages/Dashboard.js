@@ -1,20 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import api from '../api';
 
-const API = 'http://localhost:5000';
-
+const API = process.env.REACT_APP_API_URL || "";
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { isDark, toggleTheme, theme } = useTheme();
   const navigate = useNavigate();
+  const [resolvedCourseId, setResolvedCourseId] = useState(user?.enrolledCourse || null);
   const [stats, setStats] = useState({ attendance: 0, present: 0, absent: 0, total: 0, streak: 0 });
   const [todayClass, setTodayClass] = useState(null);
   const [submissions, setSubmissions] = useState([]);
+  const [dailyFeedbacks, setDailyFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [time, setTime] = useState(new Date());
+  const [availableCourses, setAvailableCourses] = useState([]);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -31,21 +33,40 @@ const Dashboard = () => {
     return () => window.removeEventListener('attendance-marked', handler);
   }, [user]);
 
+  // Auto-resolve courseId if not in user object
+  useEffect(() => {
+    if (!resolvedCourseId && user?._id && token) {
+      api.get(`${API}/api/courses/${user._id}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => { if (res.data?.length > 0) setResolvedCourseId(res.data[0]._id); })
+        .catch(() => {});
+    }
+  }, [user, token]);
+
+  // Fetch all available courses for not-enrolled trainees
+  useEffect(() => {
+    if (token) {
+      api.get(`${API}/api/courses`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => setAvailableCourses(res.data || []))
+        .catch(() => {});
+    }
+  }, [token]);
+
   const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      const courseId = user?.enrolledCourse;
+      const tok = token || localStorage.getItem('lms_token_student') || localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${tok}` };
+      const courseId = user?.enrolledCourse || resolvedCourseId;
 
       const promises = [
-        axios.get(`${API}/api/attendance/stats`, { headers }),
-        axios.get(`${API}/api/submissions/all`, { headers }),
+        api.get(`${API}/api/attendance/stats`, { headers }),
+        api.get(`${API}/api/submissions/all`, { headers }),
+        api.get(`${API}/api/daily-feedback/trainee${courseId ? `?courseId=${courseId}` : ''}`, { headers }),
       ];
       if (courseId) {
-        promises.push(axios.get(`${API}/api/classes/today/${courseId}`, { headers }));
+        promises.push(api.get(`${API}/api/classes/today/${courseId}`, { headers }));
       }
 
-      const [attRes, subRes, classRes] = await Promise.allSettled(promises);
+      const [attRes, subRes, fbRes, classRes] = await Promise.allSettled(promises);
 
       if (attRes.status === 'fulfilled') {
         const d = attRes.value.data;
@@ -60,6 +81,10 @@ const Dashboard = () => {
 
       if (subRes.status === 'fulfilled') {
         setSubmissions(subRes.value.data || []);
+      }
+
+      if (fbRes.status === 'fulfilled') {
+        setDailyFeedbacks(fbRes.value.data || []);
       }
 
       if (classRes && classRes.status === 'fulfilled') {
@@ -196,10 +221,13 @@ const Dashboard = () => {
             { icon: '⊞', label: 'Dashboard', path: '/dashboard', active: true },
             { icon: '📅', label: 'Attendance', path: '/attendance' },
             { icon: '🎥', label: 'Classes', path: '/courses' },
+            { icon: '📚', label: 'My Course', path: '/my-course' },
             { icon: '📝', label: 'Assignments', path: `/assignment/${todayDate}` },
             { icon: '🔔', label: 'Notifications', path: '/notifications' },
             { icon: '📊', label: 'Analytics', path: '/analytics' },
           { icon: '🏆', label: 'Leaderboard', path: '/leaderboard' },
+            { icon: '💬', label: 'Group Chat',  path: resolvedCourseId ? `/chat/${resolvedCourseId}` : '/courses' },
+            { icon: '📅', label: 'Weekly Report', path: '/weekly-report' },
             { icon: '👤', label: 'Profile', path: '/profile' },
           ].map(item => (
             <button
@@ -297,13 +325,22 @@ const Dashboard = () => {
                 {validSubmissions.slice(0, 3).map((sub, i) => {
                   const totalAnswered = (sub.secA?.answered || 0) + (sub.secB?.answered || 0) + (sub.secC?.answered || 0);
                   const totalQ = (sub.secA?.total || 20) + (sub.secB?.total || 20) + (sub.secC?.total || 10);
+                  const autoScore = (sub.secA?.score||0)+(sub.secB?.score||0)+(sub.secC?.score||0);
+                  const displayScore = sub.scorePublished && sub.manualScore != null ? sub.manualScore : autoScore;
+                  const maxScore = sub.maxScore || 100;
+                  const isGraded = sub.scorePublished && sub.manualScore != null;
                   return (
                     <div key={i} style={s.assignmentItem}>
-                      <div style={{ ...s.assignmentDot, background: sub.status === 'submitted' ? theme.accent : theme.accentOrange }}></div>
+                      <div style={{ ...s.assignmentDot, background: sub.status === 'submitted' ? (isGraded ? '#10b981' : theme.accent) : theme.accentOrange }}></div>
                       <div style={s.assignmentInfo}>
                         <div style={s.assignmentTitle}>Assignment — {sub.date}</div>
                         <div style={s.assignmentDue}>
-                          {sub.status === 'submitted' ? `✅ Submitted • Score: ${(sub.secA?.score||0)+(sub.secB?.score||0)+(sub.secC?.score||0)}` : `📝 ${totalAnswered}/${totalQ} answered`}
+                          {sub.status === 'submitted'
+                            ? isGraded
+                              ? <span style={{ color: '#10b981', fontWeight: 600 }}>🏆 Graded • Score: {displayScore}/{maxScore}</span>
+                              : <span>✅ Submitted • Awaiting grade</span>
+                            : `📝 ${totalAnswered}/${totalQ} answered`
+                          }
                         </div>
                       </div>
                       {sub.status !== 'submitted' && (
@@ -355,6 +392,59 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* ── DAILY FEEDBACK FROM ADMIN ──────────────────────── */}
+        {dailyFeedbacks.length > 0 && (
+          <div style={{ padding: '0 24px 24px', maxWidth: 900, margin: '0 auto' }}>
+            <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', borderRadius: 16, padding: 20, border: '1px solid #2a2a4a' }}>
+              <div style={{ fontWeight: 700, fontSize: 16, color: '#e0e0e0', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                ⭐ Daily Feedback from Admin
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {dailyFeedbacks.slice(0, 5).map((fb, i) => (
+                  <div key={fb._id || i} style={{ background: '#0f0f1e', borderRadius: 10, padding: 14, borderLeft: '3px solid #7b61ff' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: '#888' }}>📅 {fb.date}</span>
+                      {fb.rating && (
+                        <span style={{ fontSize: 12, color: '#f5a623' }}>{'⭐'.repeat(fb.rating)} ({fb.rating}/5)</span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: 14, color: '#ccc', lineHeight: 1.5, margin: 0 }}>{fb.feedback}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── AVAILABLE COURSES (shown when not enrolled OR always) ─── */}
+        {availableCourses.filter(c => c._id !== resolvedCourseId).length > 0 && !resolvedCourseId && (
+          <div style={{ padding: '0 24px 24px', maxWidth: 900, margin: '0 auto' }}>
+            <div style={{ background: theme.cardBg, borderRadius: 16, padding: 20, border: `1px solid ${theme.border}` }}>
+              <div style={{ fontWeight: 700, fontSize: 16, color: theme.textPrimary, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                📚 Available Courses
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+                {availableCourses.map(course => (
+                  <div key={course._id} style={{ background: theme.pageBg, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '16px 18px', borderLeft: '3px solid #7c6af5' }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: theme.textPrimary, marginBottom: 6 }}>{course.title}</div>
+                    {course.description && <div style={{ fontSize: 12, color: theme.textMuted, marginBottom: 10, lineHeight: 1.5 }}>{course.description}</div>}
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                      {(course.technologies || []).slice(0, 4).map((t, i) => (
+                        <span key={i} style={{ fontSize: 11, padding: '2px 8px', background: '#7c6af520', color: '#7c6af5', borderRadius: 20, fontWeight: 600 }}>{t}</span>
+                      ))}
+                      {(course.technologies || []).length > 4 && <span style={{ fontSize: 11, color: theme.textMuted }}>+{course.technologies.length - 4} more</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: theme.textMuted }}>
+                      👥 {course.enrolledStudents?.length || 0} trainees enrolled
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 12, color: theme.textMuted, marginTop: 12 }}>Contact admin to get enrolled in a course.</p>
+            </div>
+          </div>
+        )}
       </main>
 
       <style>{`
