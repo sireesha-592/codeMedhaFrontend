@@ -6,6 +6,7 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  const handleProfile = () => navigate('/profile');
   const handleLogout = () => {
     logout();
     navigate('/student/login');
@@ -38,11 +39,11 @@ export default function Navbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         {user && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{
+            <div onClick={handleProfile} style={{
               width: 32, height: 32, borderRadius: '50%',
               background: roleColor,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontWeight: 700, fontSize: 14
+              color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer'
             }}>
               {(user.name || user.email || 'U')[0].toUpperCase()}
             </div>
