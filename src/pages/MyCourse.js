@@ -219,33 +219,7 @@ export default function MyCourse() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: theme.pageBg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
-      {/* Sidebar */}
-      <div style={{ width: 220, flexShrink: 0, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', padding: '20px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px 28px' }}>
-          <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⚡</div>
-          <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>CodeMedha</span>
-        </div>
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
-          {navItems.map(item => (
-            <button key={item.label}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: 'none', background: item.active ? theme.navActiveBg : 'transparent', color: item.active ? theme.navActiveColor : theme.navInactiveColor, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%' }}
-              onClick={() => navigate(item.path)}>
-              <span style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', borderTop: `1px solid ${theme.border}` }}>
-          <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#00d4aa,#7c6af5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: theme.textSecondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'Student'}</div>
-            <div style={{ fontSize: 10, color: theme.textMuted, marginTop: 1 }}>Trainee</div>
-          </div>
-        </div>
-        <button onClick={toggleTheme} style={{ margin: '0 16px 16px', padding: '8px 12px', borderRadius: 10, border: `1px solid ${theme.border}`, background: theme.toggleBg, color: theme.toggleColor, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-          {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
-        </button>
-      </div>
+      <Sidebar activePath="/my-course" />
 
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', background: theme.pageBg, position: 'relative' }}>
