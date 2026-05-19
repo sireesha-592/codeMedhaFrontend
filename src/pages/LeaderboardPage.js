@@ -48,13 +48,9 @@ const LeaderboardPage = () => {
   const myRank = sorted.findIndex(s => s.userId === myId) + 1;
   const me = sorted.find(s => s.userId === myId);
 
-  const SidebarNav = () => (
-    <Sidebar activePath="/leaderboard" />
-  );
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
-      <SidebarNav />
+      <Sidebar activePath="/leaderboard" />
 
       <main style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 

@@ -310,13 +310,9 @@ const AnalyticsPage = () => {
 
   const maxMonthly = data ? Math.max(...(data.monthlyAtt || []).map(w => w.value), 1) : 100;
 
-  const SidebarNav = () => (
-    <Sidebar activePath="/analytics" />
-  );
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
-      <SidebarNav />
+      <Sidebar activePath="/analytics" />
 
       <main style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Header */}
