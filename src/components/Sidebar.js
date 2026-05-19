@@ -45,7 +45,8 @@ export default function Sidebar({ activePath, courseId }) {
 
   const resolvedNav = NAV_ITEMS.map(item => {
     if (item.path === '/chat') {
-      return { ...item, path: courseId ? `/chat/${courseId}` : '/courses' };
+      const cId = courseId || user?.enrolledCourse;
+return { ...item, path: cId ? `/chat/${cId}` : '/courses' };
     }
     if (item.path === '/assignments') {
       const today = new Date().toISOString().split('T')[0];
