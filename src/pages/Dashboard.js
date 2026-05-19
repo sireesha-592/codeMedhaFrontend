@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [time, setTime] = useState(new Date());
   const [availableCourses, setAvailableCourses] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -171,7 +172,7 @@ const Dashboard = () => {
       transition: 'all 0.3s',
       flexShrink: 0,
     },
-    statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, animation: 'fadeIn 0.6s ease' },
+    statsGrid: { display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 16, animation: 'fadeIn 0.6s ease' },
     statCard: { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 16, padding: '20px', position: 'relative', overflow: 'hidden' },
     statTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
     statIcon: { fontSize: 22 },
@@ -179,7 +180,7 @@ const Dashboard = () => {
     statValue: { fontSize: 28, fontWeight: 800, letterSpacing: '-1px', marginBottom: 4 },
     statLabel: { fontSize: 12, color: theme.textSecondary, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' },
     statSub: { fontSize: 11, color: theme.textMuted, marginTop: 4 },
-    bottomGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, animation: 'fadeIn 0.7s ease' },
+    bottomGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 16, animation: 'fadeIn 0.7s ease' },
     card: { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 16, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 },
     cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     cardTitle: { fontSize: 14, fontWeight: 600, color: theme.textSecondary },
@@ -214,43 +215,7 @@ const Dashboard = () => {
   return (
     <div style={{...s.page, paddingTop: 56}}>
       <Navbar />
-      <Sidebar activePath="/dashboard" courseId={resolvedCourseId} /><!--
-        <div style={s.sidebarLogo}>
-          <div style={s.logoIcon}>⚡</div>
-          <span style={s.logoText}>CodeMedha</span>
-        </div>
-        <nav style={s.nav}>
-          {[
-            { icon: '⊞', label: 'Dashboard', path: '/dashboard', active: true },
-            { icon: '📅', label: 'Attendance', path: '/attendance' },
-            { icon: '🎥', label: 'Classes', path: '/courses' },
-            { icon: '📚', label: 'My Course', path: '/my-course' },
-            { icon: '📝', label: 'Assignments', path: `/assignment/${todayDate}` },
-            { icon: '🔔', label: 'Notifications', path: '/notifications' },
-            { icon: '📊', label: 'Analytics', path: '/analytics' },
-          { icon: '🏆', label: 'Leaderboard', path: '/leaderboard' },
-            { icon: '💬', label: 'Group Chat',  path: resolvedCourseId ? `/chat/${resolvedCourseId}` : '/courses' },
-            { icon: '📅', label: 'Weekly Report', path: '/weekly-report' },
-            { icon: '👤', label: 'Profile', path: '/profile' },
-          ].map(item => (
-            <button
-              key={item.path}
-              style={{ ...s.navItem, ...(item.active ? s.navItemActive : {}) }}
-              onClick={() => navigate(item.path)}
-            >
-              <span style={s.navIcon}>{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div style={s.sidebarUser}>
-          <div style={s.userAvatar}>{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
-          <div>
-            <div style={s.userName}>{user?.name || 'Student'}</div>
-            <div style={s.userRole}>{user?.role === 'teacher' ? 'Teacher' : 'MERN Stack Developer'}</div>
-          </div>
-        </div>
-      -->
+      <Sidebar activePath="/dashboard" courseId={resolvedCourseId} />
 
       <main style={s.main}>
         <header style={s.header}>
