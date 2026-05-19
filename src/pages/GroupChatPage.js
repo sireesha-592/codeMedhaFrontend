@@ -43,7 +43,7 @@ export default function GroupChatPage() {
   // Redirects to correct courseId if URL has a stale/wrong one
   const [courseId, setCourseId] = useState(urlCourseId || '');
   useEffect(() => {
-    if (!token) return;
+    if (!token || urlCourseId) return;
     api.get(`${API}/api/chat/active-course`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => {
         const serverCourseId = r.data?.courseId;

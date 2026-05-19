@@ -210,8 +210,7 @@ export default function CoursePage() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: theme.pageBg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
-      <Sidebar activePath="/courses" />
-
+      <Sidebar activePath="/courses" courseId={user&&user.enrolledCourse} />
       {/* Main */}
       <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', padding: 24, overflow: 'auto', background: theme.pageBg }}>
         {/* Header */}

@@ -70,8 +70,7 @@ const WeeklyReportPage = () => {
   return (
     <div style={{display:'flex',minHeight:'100vh',background:C.bg,color:C.text,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
       {/* Sidebar */}
-      <Sidebar activePath="/weekly-report" />
-
+      <Sidebar activePath="/weekly-report" courseId={user&&user.enrolledCourse} />
       {/* Main */}
       <main style={{flex: 1, minWidth: 0, overflow: "hidden",padding:'32px',overflowY:'auto'}}>
         {/* Header */}

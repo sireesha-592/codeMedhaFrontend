@@ -119,7 +119,7 @@ const NotificationsPage = () => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', overflowX: 'hidden', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
-      <Sidebar activePath="/notifications" />
+      <Sidebar activePath="/notifications" courseId={user&&user.enrolledCourse} />
 
       <main style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

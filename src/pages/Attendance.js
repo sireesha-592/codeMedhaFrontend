@@ -29,7 +29,7 @@ export default function Attendance() {
     <div style={{ ...styles.container, background: theme.pageBg, color: theme.textPrimary }}>
 
       {/* ── Sidebar ── */}
-      <Sidebar activePath="/attendance" />
+      <Sidebar activePath="/attendance" courseId={user&&user.enrolledCourse} />
 
       {/* ── Main ── */}
       <div style={{ ...styles.main, background: theme.pageBg }}>

@@ -313,7 +313,7 @@ const AnalyticsPage = () => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', overflowX: 'hidden', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
-      <Sidebar activePath="/analytics" />
+      <Sidebar activePath="/analytics" courseId={user&&user.enrolledCourse} />
 
       <main style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Header */}
