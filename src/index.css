@@ -65,3 +65,64 @@ html, body {
     flex-wrap: wrap;
   }
 }
+
+
+/* ── Page layout fix for mobile ── */
+@media (max-width: 768px) {
+  /* Main page wrapper - add top padding for hamburger */
+  div[style*="display: flex"][style*="minHeight: 100vh"],
+  div[style*="display: flex"][style*="min-height: 100vh"] {
+    padding-top: 0 !important;
+  }
+
+  /* Content area - push down for hamburger button */
+  div[style*="flex: 1"],
+  div[style*="flex:1"] {
+    padding-top: 50px !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-bottom: 70px !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  /* All grids become single column on mobile */
+  div[style*="gridTemplateColumns: repeat(3"] {
+    grid-template-columns: 1fr !important;
+  }
+  div[style*="gridTemplateColumns: repeat(4"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  div[style*="gridTemplateColumns: '1fr 1fr 1fr'"],
+  div[style*='gridTemplateColumns: "1fr 1fr 1fr"'] {
+    grid-template-columns: 1fr !important;
+  }
+  div[style*="gridTemplateColumns: '1fr 1fr'"],
+  div[style*='gridTemplateColumns: "1fr 1fr"'] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Cards should not overflow */
+  div[style*="borderRadius"][style*="padding"] {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Tables scroll horizontally */
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    max-width: 100% !important;
+  }
+
+  /* Fix font sizes */
+  h1 { font-size: 20px !important; }
+  h2 { font-size: 18px !important; }
+  h3 { font-size: 16px !important; }
+
+  /* Bottom nav spacing */
+  body {
+    padding-bottom: 60px;
+  }
+}
