@@ -1,3 +1,4 @@
+import Sidebar from '../components/Sidebar';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import AttendanceCalendar from '../components/AttendanceCalendar';

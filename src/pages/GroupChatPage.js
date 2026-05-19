@@ -1,3 +1,4 @@
+import Sidebar from '../components/Sidebar';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
