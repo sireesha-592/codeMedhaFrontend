@@ -44,7 +44,7 @@ export default function Login({ role = 'student' }) {
       else                                                       navigate('/dashboard');
 
     } catch (err) {
-      setError('Invalid email or password');
+      setError(err?.response?.data?.message || err?.message || JSON.stringify(err));
     } finally {
       setLoading(false);
     }
