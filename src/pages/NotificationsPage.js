@@ -118,58 +118,7 @@ const NotificationsPage = () => {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
-      <aside style={{ width: 220, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', padding: '24px 0', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px 28px' }}>
-          <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⚡</div>
-          <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>CodeMedha</span>
-        </div>
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
-          {[
-            { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
-            { icon: '📅', label: 'Attendance',    path: '/attendance' },
-            { icon: '🎥', label: 'Classes',       path: '/courses' },
-            { icon: '📚', label: 'My Course',     path: '/my-course' },
-            { icon: '📝', label: 'Assignments',   path: '/assignments' },
-            { icon: '🔔', label: 'Notifications', path: '/notifications', active: true },
-            { icon: '📊', label: 'Analytics',     path: '/analytics' },
-          { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
-            { icon: '👤', label: 'Profile',       path: '/profile' },
-            { icon: '💬', label: 'Group Chat',    path: user?.enrolledCourse ? `/chat/${user.enrolledCourse}` : '/courses' },
-          ].map(item => (
-            <button
-              key={item.path}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 14px', borderRadius: 10, border: 'none',
-                background: item.active ? theme.navActiveBg : 'transparent',
-                color: item.active ? theme.navActiveColor : theme.navInactiveColor,
-                fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
-                textAlign: 'left', transition: 'all 0.2s', width: '100%', position: 'relative',
-              }}
-              onClick={() => navigate(item.path)}
-            >
-              <span style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{item.icon}</span>
-              <span>{item.label}</span>
-              {item.active && unreadCount > 0 && (
-                <span style={{ marginLeft: 'auto', background: '#f55', color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10 }}>{unreadCount}</span>
-              )}
-            </button>
-          ))}
-        </nav>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px', borderTop: `1px solid ${theme.border}` }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, flexShrink: 0 }}>{user?.name?.charAt(0)?.toUpperCase() || 'U'}</div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: theme.textSecondary }}>{user?.name || 'Student'}</div>
-            <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 2 }}>{user?.role === 'teacher' ? 'Teacher' : 'MERN Stack Developer'}</div>
-          </div>
-        </div>
-        <button
-          onClick={toggleTheme}
-          style={{ margin: '0 16px 16px', padding: '8px 12px', borderRadius: 10, border: `1px solid ${theme.border}`, background: theme.toggleBg, color: theme.toggleColor, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-        >
-          {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
-        </button>
-      </aside>
+      <Sidebar activePath="/notifications" />
 
       <main style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

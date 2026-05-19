@@ -230,33 +230,7 @@ export default function GroupChatPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
 
       {/* ── Sidebar ── */}
-      <aside style={{ width: 220, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}`, display: 'flex', flexDirection: 'column', padding: '24px 0', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px 28px' }}>
-          <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg,#00d4aa,#7c6af5)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⚡</div>
-          <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>CodeMedha</span>
-        </div>
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
-          {NAV_ITEMS.map(item => (
-            <button key={item.path} onClick={() => navigate(item.path)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 10, border: 'none', background: item.active ? theme.navActiveBg : 'transparent', color: item.active ? theme.navActiveColor : theme.navInactiveColor, fontSize: 13.5, fontWeight: 500, cursor: 'pointer', textAlign: 'left', width: '100%' }}>
-              <span style={{ fontSize: 16, width: 20, textAlign: 'center' }}>{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px', borderTop: `1px solid ${theme.border}` }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg,#00d4aa,#7c6af5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
-            {userName?.charAt(0)?.toUpperCase() || 'U'}
-          </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: theme.textSecondary }}>{userName}</div>
-            <div style={{ fontSize: 11, color: theme.textMuted }}>{userRole}</div>
-          </div>
-        </div>
-        <button onClick={toggleTheme} style={{ margin: '0 16px 16px', padding: '8px 12px', borderRadius: 10, border: `1px solid ${theme.border}`, background: theme.toggleBg, color: theme.toggleColor, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-          {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
-        </button>
-      </aside>
+      <Sidebar activePath="/chat" />
 
       {/* ── Main Chat ── */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>

@@ -28,57 +28,7 @@ export default function Attendance() {
     <div style={{ ...styles.container, background: theme.pageBg, color: theme.textPrimary }}>
 
       {/* ── Sidebar ── */}
-      <aside style={{ ...styles.sidebar, background: theme.sidebarBg, borderRight: `1px solid ${theme.border}` }}>
-        <div style={styles.sidebarLogo}>
-          <div style={styles.logoIcon}>⚡</div>
-          <span style={{ ...styles.logoText, color: theme.textPrimary }}>CodeMedha</span>
-        </div>
-
-        <nav style={styles.nav}>
-          {navItems.map(item => (
-            <button
-              key={item.label}
-              style={{
-                ...styles.navItem,
-                color: item.active ? theme.navActiveColor : theme.navInactiveColor,
-                background: item.active ? theme.navActiveBg : 'transparent',
-              }}
-              onClick={() => item.path && navigate(item.path)}
-            >
-              <span style={styles.navIcon}>{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div style={{ ...styles.sidebarUser, borderTop: `1px solid ${theme.border}` }}>
-          <div style={styles.userAvatar}>
-            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-          </div>
-          <div>
-            <div style={{ ...styles.userName, color: theme.textSecondary }}>{user?.name || 'Student'}</div>
-            <div style={{ ...styles.userRole, color: theme.textMuted }}>MERN Stack Developer</div>
-          </div>
-        </div>
-
-        {/* Theme Toggle */}
-        <button
-          onClick={toggleTheme}
-          style={{
-            margin: '0 16px 16px',
-            padding: '8px 12px',
-            borderRadius: 10,
-            border: `1px solid ${theme.border}`,
-            background: theme.toggleBg,
-            color: theme.toggleColor,
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
-        </button>
-      </aside>
+      <Sidebar activePath="/attendance" />
 
       {/* ── Main ── */}
       <div style={{ ...styles.main, background: theme.pageBg }}>

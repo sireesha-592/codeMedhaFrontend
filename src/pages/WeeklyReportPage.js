@@ -69,25 +69,7 @@ const WeeklyReportPage = () => {
   return (
     <div style={{display:'flex',minHeight:'100vh',background:C.bg,color:C.text,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
       {/* Sidebar */}
-      <aside style={{width:220,background:C.sidebar,display:'flex',flexDirection:'column',padding:'24px 0',position:'sticky',top:0,height:'100vh',overflowY:'auto',flexShrink:0}}>
-        <div style={{display:'flex',alignItems:'center',gap:10,padding:'0 20px 24px'}}>
-          <div style={{width:34,height:34,background:'linear-gradient(135deg,#6366f1,#8b5cf6)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16}}>⚡</div>
-          <span style={{fontSize:18,fontWeight:700,color:'#fff'}}>CodeMedha</span>
-        </div>
-        <nav style={{flex:1,display:'flex',flexDirection:'column',gap:2,padding:'0 10px'}}>
-          {NAV.map(item => (
-            <button key={item.path} onClick={() => navigate(item.path)}
-              style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px',borderRadius:10,border:'none',background:item.active?'rgba(99,102,241,0.2)':'transparent',color:item.active?'#a5b4fc':'rgba(255,255,255,0.5)',fontSize:13,fontWeight:item.active?700:400,cursor:'pointer',textAlign:'left',width:'100%',borderLeft:item.active?'3px solid #6366f1':'3px solid transparent'}}>
-              <span style={{fontSize:15,width:20,textAlign:'center'}}>{item.icon}</span><span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div style={{padding:'14px',borderTop:'1px solid rgba(255,255,255,0.1)'}}>
-          <button onClick={toggleTheme} style={{width:'100%',padding:'9px',borderRadius:10,border:'1px solid rgba(255,255,255,0.15)',background:'rgba(255,255,255,0.05)',color:'#ccc',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-            {isDark ? '☀️ Light Mode' : '🌙 Dark Mode'}
-          </button>
-        </div>
-      </aside>
+      <Sidebar activePath="/weekly-report" />
 
       {/* Main */}
       <main style={{flex:1,padding:'32px',overflowY:'auto'}}>
