@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
 import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
 
 const API = process.env.REACT_APP_API_URL || "";
 const Dashboard = () => {
@@ -213,7 +214,7 @@ const Dashboard = () => {
   return (
     <div style={{...s.page, paddingTop: 56}}>
       <Navbar />
-      <aside style={s.sidebar}>
+      <Sidebar activePath="/dashboard" courseId={resolvedCourseId} /><!--
         <div style={s.sidebarLogo}>
           <div style={s.logoIcon}>⚡</div>
           <span style={s.logoText}>CodeMedha</span>
@@ -249,7 +250,7 @@ const Dashboard = () => {
             <div style={s.userRole}>{user?.role === 'teacher' ? 'Teacher' : 'MERN Stack Developer'}</div>
           </div>
         </div>
-      </aside>
+      -->
 
       <main style={s.main}>
         <header style={s.header}>
