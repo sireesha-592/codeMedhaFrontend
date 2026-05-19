@@ -46,7 +46,7 @@ export default function Sidebar({ activePath, courseId }) {
   const resolvedNav = NAV_ITEMS.map(item => {
     if (item.path === '/chat') {
       const cId = courseId || user?.enrolledCourse;
-return { ...item, path: cId ? `/chat/${cId}` : '/courses' };
+      return { ...item, path: cId ? `/chat/${cId}` : '/courses' };
     }
     if (item.path === '/assignments') {
       const today = new Date().toISOString().split('T')[0];
@@ -56,46 +56,34 @@ return { ...item, path: cId ? `/chat/${cId}` : '/courses' };
   });
 
   const navBtn = (isActive) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    padding: '10px 14px',
-    borderRadius: 10,
-    border: 'none',
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '10px 14px', borderRadius: 10, border: 'none',
     background: isActive ? theme.navActiveBg : 'transparent',
     color: isActive ? theme.navActiveColor : theme.navInactiveColor,
-    fontSize: 13.5,
-    fontWeight: 500,
-    cursor: 'pointer',
-    textAlign: 'left',
-    transition: 'all 0.2s',
-    width: '100%',
+    fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
+    textAlign: 'left', transition: 'all 0.2s', width: '100%',
   });
 
   if (isMobile) {
     return (
       <>
-        <button
-          onClick={() => setMenuOpen(o => !o)}
-          style={{
-            position: 'fixed', top: 10, left: 12, zIndex: 1200,
-            background: theme.sidebarBg, border: `1px solid ${theme.border}`,
-            borderRadius: 8, width: 38, height: 38,
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            gap: 5, cursor: 'pointer', padding: 0,
-          }}
-        >
+        <button onClick={() => setMenuOpen(o => !o)} style={{
+          position: 'fixed', top: 10, left: 12, zIndex: 1200,
+          background: theme.sidebarBg, border: `1px solid ${theme.border}`,
+          borderRadius: 8, width: 38, height: 38,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 5, cursor: 'pointer', padding: 0,
+        }}>
           <span style={{ display: 'block', width: 18, height: 2, background: theme.textPrimary, borderRadius: 2 }} />
           <span style={{ display: 'block', width: 18, height: 2, background: theme.textPrimary, borderRadius: 2 }} />
           <span style={{ display: 'block', width: 18, height: 2, background: theme.textPrimary, borderRadius: 2 }} />
         </button>
 
         {menuOpen && (
-          <div
-            onClick={() => setMenuOpen(false)}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100 }}
-          />
+          <div onClick={() => setMenuOpen(false)} style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100
+          }} />
         )}
 
         <div style={{
@@ -111,7 +99,6 @@ return { ...item, path: cId ? `/chat/${cId}` : '/courses' };
             <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#fff', fontWeight: 700 }}>C</div>
             <span style={{ fontSize: 18, fontWeight: 700, color: theme.textPrimary }}>CodeMedha</span>
           </div>
-
           <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' }}>
             {resolvedNav.map(item => {
               const isActive = currentPath === item.path || location.pathname === item.path;
@@ -122,7 +109,6 @@ return { ...item, path: cId ? `/chat/${cId}` : '/courses' };
               );
             })}
           </nav>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', borderTop: `1px solid ${theme.border}`, marginTop: 'auto' }}>
             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff' }}>
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
