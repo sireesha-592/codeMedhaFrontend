@@ -122,7 +122,7 @@ const ProfilePage = () => {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', overflowX: 'hidden', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
       {/* Sidebar */}
       <Sidebar activePath="/profile" />
 

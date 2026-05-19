@@ -231,7 +231,7 @@ export default function GroupChatPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
 
       {/* ── Sidebar ── */}
-      <Sidebar activePath="/chat" />
+      <Sidebar activePath="/chat" courseId={courseId} />
 
       {/* ── Main Chat ── */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
