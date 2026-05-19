@@ -223,7 +223,7 @@ export default function MyCourse() {
       <Sidebar activePath="/my-course" />
 
       {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', background: theme.pageBg, position: 'relative' }}>
+      <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', background: theme.pageBg, position: 'relative' }}>
         {/* Hero */}
         <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)', padding: '40px 40px 40px', position: 'relative', zIndex: 0, flexShrink: 0 }}>
           <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, #7c6af520, transparent)', pointerEvents: 'none' }} />
@@ -334,7 +334,7 @@ export default function MyCourse() {
                     <button onClick={() => setActivePhase(isOpen ? null : idx)}
                       style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '16px 20px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
                       <div style={{ width: 36, height: 36, borderRadius: 10, background: phase.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: phase.textColor || '#fff', flexShrink: 0 }}>{idx + 1}</div>
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1 , minWidth: 0, overflow: "hidden"}}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: theme.textPrimary }}>{phase.title}</div>
                         <div style={{ fontSize: 12, color: theme.textMuted, marginTop: 2 }}>{phase.phase} • {phase.weeks}</div>
                       </div>

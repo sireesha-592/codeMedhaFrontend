@@ -53,7 +53,7 @@ const LeaderboardPage = () => {
     <div style={{ display: 'flex', minHeight: '100vh', overflowX: 'hidden', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
       <Sidebar activePath="/leaderboard" />
 
-      <main style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <main style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -70,7 +70,7 @@ const LeaderboardPage = () => {
         {me && (
           <div style={{ background: `linear-gradient(135deg, ${isDark ? '#1a2740' : '#1e3a5f'}, ${isDark ? '#12203a' : '#152d4d'})`, borderRadius: 16, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20, border: '1.5px solid #7c6af555' }}>
             <div style={{ fontSize: 48, lineHeight: 1 }}>{medal(myRank)}</div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: 1 , minWidth: 0, overflow: "hidden"}}>
               <div style={{ fontSize: 12, color: '#a0b4c8', fontWeight: 600, marginBottom: 4 }}>YOUR RANK</div>
               <div style={{ fontSize: 28, fontWeight: 800, color: '#fff' }}>#{myRank} <span style={{ fontSize: 16, fontWeight: 500, color: '#a0b4c8' }}>out of {sorted.length}</span></div>
               <div style={{ fontSize: 13, color: '#a0b4c8', marginTop: 4 }}>{me.name}</div>

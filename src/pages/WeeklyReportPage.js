@@ -73,7 +73,7 @@ const WeeklyReportPage = () => {
       <Sidebar activePath="/weekly-report" />
 
       {/* Main */}
-      <main style={{flex:1,padding:'32px',overflowY:'auto'}}>
+      <main style={{flex: 1, minWidth: 0, overflow: "hidden",padding:'32px',overflowY:'auto'}}>
         {/* Header */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:28}}>
           <div>
@@ -141,7 +141,7 @@ const WeeklyReportPage = () => {
             <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:'20px'}}>
               <div style={{fontSize:14,fontWeight:700,color:C.muted,marginBottom:12}}>📊 Weekly Attendance Rate</div>
               <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:10}}>
-                <div style={{flex:1,height:14,background:C.border,borderRadius:7,overflow:'hidden'}}>
+                <div style={{flex: 1, minWidth: 0, overflow: "hidden",height:14,background:C.border,borderRadius:7,overflow:'hidden'}}>
                   <div style={{height:'100%',width:`${pct}%`,borderRadius:7,background:`linear-gradient(90deg,${pctColor},${pctColor}bb)`,transition:'width 0.8s ease'}}/>
                 </div>
                 <span style={{fontSize:20,fontWeight:800,color:pctColor,minWidth:54}}>{pct}%</span>
@@ -160,7 +160,7 @@ const WeeklyReportPage = () => {
                     const h  = Math.max(10,(w.pct/100)*100);
                     const cl = w.pct>=75?'#10b981':w.pct>=50?'#f59e0b':'#ef4444';
                     return (
-                      <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:5,height:'100%',justifyContent:'flex-end'}}>
+                      <div key={i} style={{flex: 1, minWidth: 0, overflow: "hidden",display:'flex',flexDirection:'column',alignItems:'center',gap:5,height:'100%',justifyContent:'flex-end'}}>
                         <div style={{fontSize:12,fontWeight:700,color:cl}}>{w.pct}%</div>
                         <div style={{width:'100%',maxWidth:52,borderRadius:'6px 6px 0 0',background:`linear-gradient(180deg,${cl},${cl}99)`,height:`${h}%`,minHeight:10,transition:'height 0.6s ease'}}/>
                         <div style={{fontSize:11,color:C.muted,fontWeight:600}}>{w.week}</div>

@@ -93,7 +93,7 @@ const styles = {
     fontSize: 16,
   },
   logoText: { fontSize: 18, fontWeight: 700, letterSpacing: '-0.5px' },
-  nav: { flex: 1, display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' },
+  nav: { flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' },
   navItem: {
     display: 'flex', alignItems: 'center', gap: 10,
     padding: '10px 14px', borderRadius: 10, border: 'none',
@@ -114,7 +114,7 @@ const styles = {
   userName: { fontSize: 13, fontWeight: 600 },
   userRole: { fontSize: 11, marginTop: 2 },
   main: {
-    flex: 1, display: 'flex', flexDirection: 'column',
+    flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column',
     padding: '28px 28px 20px', overflow: 'hidden', minWidth: 0,
   },
   topBar: {
@@ -133,5 +133,5 @@ const styles = {
     background: '#00d4aa', display: 'inline-block',
     boxShadow: '0 0 6px #00d4aa',
   },
-  calendarWrapper: { flex: 1, minHeight: 0, overflow: 'hidden' },
+  calendarWrapper: { flex: 1, minWidth: 0, overflow: "hidden", minHeight: 0, overflow: 'hidden' },
 };

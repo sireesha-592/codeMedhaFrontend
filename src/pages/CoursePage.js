@@ -213,7 +213,7 @@ export default function CoursePage() {
       <Sidebar activePath="/courses" />
 
       {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 24, overflow: 'auto', background: theme.pageBg }}>
+      <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', padding: 24, overflow: 'auto', background: theme.pageBg }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <h2 style={{ color: theme.textPrimary, fontSize: 22, fontWeight: 700, margin: 0 }}>📺 Today's Class</h2>
@@ -225,18 +225,18 @@ export default function CoursePage() {
         </div>
 
         {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1 , minWidth: 0, overflow: "hidden"}}>
             <div style={{ width: 32, height: 32, border: `3px solid ${theme.border}`, borderTop: `3px solid ${theme.accent}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
             <p style={{ color: theme.textMuted, marginTop: 12 }}>Loading class...</p>
           </div>
         ) : !dailyClass ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0, overflow: "hidden", gap: 12 }}>
             <div style={{ fontSize: 48 }}>📅</div>
             <h3 style={{ fontSize: 20, color: theme.textPrimary, fontWeight: 700, margin: 0 }}>No class today</h3>
             <p style={{ fontSize: 14, color: theme.textMuted, margin: 0 }}>Today's class has not been uploaded yet. Check back later!</p>
           </div>
         ) : (
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1 , minWidth: 0, overflow: "hidden"}}>
             <div style={{ background: theme.cardBg, borderRadius: 16, overflow: 'hidden', border: `1px solid ${theme.border}` }}>
               <div style={{ padding: '20px 24px', borderBottom: `1px solid ${theme.border}` }}>
                 <h3 style={{ fontSize: 18, color: theme.textPrimary, fontWeight: 700, margin: '0 0 10px 0' }}>{dailyClass.title}</h3>

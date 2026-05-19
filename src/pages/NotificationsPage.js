@@ -121,7 +121,7 @@ const NotificationsPage = () => {
     <div style={{ display: 'flex', minHeight: '100vh', overflowX: 'hidden', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
       <Sidebar activePath="/notifications" />
 
-      <main style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <main style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontSize: 22, fontWeight: 800, color: theme.textPrimary, marginBottom: 4 }}>🔔 Notifications</div>
@@ -191,7 +191,7 @@ const NotificationsPage = () => {
                 <div style={{ width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, background: notif.color + '20', color: notif.color }}>
                   {notif.icon}
                 </div>
-                <div style={{ flex: 1, paddingRight: 16 }}>
+                <div style={{ flex: 1, minWidth: 0, overflow: "hidden", paddingRight: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: theme.textPrimary }}>{notif.title}</div>
                     {notif.urgent && <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 4, background: '#f5515122', color: '#f55', border: '1px solid #f5555544', letterSpacing: '0.5px' }}>URGENT</span>}

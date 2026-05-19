@@ -234,7 +234,7 @@ export default function GroupChatPage() {
       <Sidebar activePath="/chat" courseId={courseId} />
 
       {/* ── Main Chat ── */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <main style={{ flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ padding: '16px 24px', borderBottom: `1px solid ${theme.border}`, background: theme.cardBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
@@ -253,11 +253,11 @@ export default function GroupChatPage() {
         </div>
 
         {/* Messages area */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: "hidden", overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 2 }}>
 
           {/* Loading spinner */}
           {loading && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, minWidth: 0, overflow: "hidden", flexDirection: 'column', gap: 12 }}>
               <div style={{ width: 32, height: 32, border: `3px solid ${theme.border}`, borderTop: `3px solid #7c6af5`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
               <span style={{ fontSize: 13, color: theme.textMuted }}>Loading messages…</span>
             </div>
@@ -265,7 +265,7 @@ export default function GroupChatPage() {
 
           {/* Error state */}
           {!loading && loadError && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 14, padding: 40 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0, overflow: "hidden", gap: 14, padding: 40 }}>
               <div style={{ fontSize: 48 }}>⚠️</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: theme.textPrimary, textAlign: 'center' }}>Cannot load chat</div>
               <div style={{ fontSize: 13, color: theme.textMuted, textAlign: 'center', maxWidth: 340, lineHeight: 1.6 }}>{loadError}</div>
@@ -278,7 +278,7 @@ export default function GroupChatPage() {
 
           {/* Empty state */}
           {!loading && !loadError && messages.length === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: 12, color: theme.textMuted }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, minWidth: 0, overflow: "hidden", gap: 12, color: theme.textMuted }}>
               <div style={{ fontSize: 52 }}>💬</div>
               <div style={{ fontSize: 16, fontWeight: 600, color: theme.textPrimary }}>No messages yet</div>
               <div style={{ fontSize: 13 }}>Be the first to say something!</div>
@@ -377,7 +377,7 @@ export default function GroupChatPage() {
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
                 rows={1}
-                style={{ flex: 1, padding: '12px 16px', borderRadius: 12, border: `1px solid ${theme.border}`, background: theme.pageBg, color: theme.textPrimary, fontSize: 14, resize: 'none', outline: 'none', fontFamily: 'inherit', lineHeight: 1.5, maxHeight: 120, overflowY: 'auto' }}
+                style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: '12px 16px', borderRadius: 12, border: `1px solid ${theme.border}`, background: theme.pageBg, color: theme.textPrimary, fontSize: 14, resize: 'none', outline: 'none', fontFamily: 'inherit', lineHeight: 1.5, maxHeight: 120, overflowY: 'auto' }}
               />
               <button onClick={sendMessage} disabled={!input.trim() || sending}
                 style={{ width: 46, height: 46, borderRadius: 12, border: 'none', background: !input.trim() ? theme.border : 'linear-gradient(135deg,#00d4aa,#7c6af5)', color: '#fff', fontSize: 18, cursor: !input.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>

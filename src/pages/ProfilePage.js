@@ -126,7 +126,7 @@ const ProfilePage = () => {
       {/* Sidebar */}
       <Sidebar activePath="/profile" />
 
-      <main style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <main style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Hero */}
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 20, padding: '28px', position: 'relative', overflow: 'hidden', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: `radial-gradient(circle at 20% 50%, ${theme.accent}0a 0%, transparent 60%)`, pointerEvents: 'none' }}></div>
@@ -183,7 +183,7 @@ const ProfilePage = () => {
             <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: theme.textSecondary }}>📊 Attendance Progress</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ flex: 1, height: 8, background: theme.border, borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ flex: 1, minWidth: 0, overflow: "hidden", height: 8, background: theme.border, borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ height: '100%', borderRadius: 4, transition: 'width 1s ease', width: `${attPercent}%`, background: attPercent >= 75 ? theme.accent : attPercent >= 50 ? '#f5a623' : '#f55' }}></div>
                 </div>
                 <span style={{ fontSize: 14, fontWeight: 700, color: theme.textPrimary, width: 40, textAlign: 'right' }}>{attPercent}%</span>
@@ -296,7 +296,7 @@ const ProfilePage = () => {
                 {recentActivity.map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0, background: item.color }}>{item.icon}</div>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ flex: 1 , minWidth: 0, overflow: "hidden"}}>
                       <div style={{ fontSize: 13, color: theme.textSecondary, fontWeight: 500 }}>{item.text}</div>
                       <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 2 }}>
                         {new Date(item.time).toLocaleDateString('en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}

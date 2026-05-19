@@ -315,7 +315,7 @@ const AnalyticsPage = () => {
     <div style={{ display: 'flex', minHeight: '100vh', overflowX: 'hidden', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
       <Sidebar activePath="/analytics" />
 
-      <main style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <main style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
@@ -406,7 +406,7 @@ const AnalyticsPage = () => {
                 <div style={{ fontSize: 14, fontWeight: 600, color: theme.textSecondary }}>📈 Monthly Attendance %</div>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, height: 160, padding: '0 8px' }}>
                   {data.monthlyAtt.map((w, i) => (
-                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1 }}>
+                    <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flex: 1 , minWidth: 0, overflow: "hidden"}}>
                       <div style={{ fontSize: 11, color: theme.textSecondary, fontWeight: 600 }}>{w.value}%</div>
                       <div style={{ width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', height: 140, background: theme.pageBg, borderRadius: 6, overflow: 'hidden' }}>
                         <div style={{ width: '100%', borderRadius: '4px 4px 0 0', transition: 'height 1s ease', minHeight: 4, height: `${(w.value / maxMonthly) * 140}px`, background: w.value >= 75 ? `linear-gradient(to top, ${theme.accent}, ${theme.accent}80)` : w.value >= 50 ? 'linear-gradient(to top, #f5a623, #f5a62380)' : 'linear-gradient(to top, #f55, #f5555580)' }}></div>
@@ -459,14 +459,14 @@ const AnalyticsPage = () => {
                       </div>
                     ))}
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14, minWidth: 200 }}>
+                  <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', gap: 14, minWidth: 200 }}>
                     {[
                       { label: 'Submitted', value: data.assignments.submitted, total: data.assignments.total, color: theme.accentPurple },
                       { label: 'Pending',   value: data.assignments.pending,   total: data.assignments.total, color: theme.accentOrange },
                     ].map((p, i) => (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ fontSize: 12, color: theme.textSecondary, width: 72, flexShrink: 0 }}>{p.label}</div>
-                        <div style={{ flex: 1, height: 7, background: theme.border, borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ flex: 1, minWidth: 0, overflow: "hidden", height: 7, background: theme.border, borderRadius: 4, overflow: 'hidden' }}>
                           <div style={{ height: '100%', borderRadius: 4, transition: 'width 1s ease', width: `${p.total > 0 ? (p.value / p.total) * 100 : 0}%`, background: p.color }}></div>
                         </div>
                         <div style={{ fontSize: 13, fontWeight: 700, width: 36, textAlign: 'right', color: p.color }}>{p.total > 0 ? Math.round((p.value / p.total) * 100) : 0}%</div>
@@ -528,7 +528,7 @@ const AnalyticsPage = () => {
                     return (
                       <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: theme.pageBg, borderRadius: 10, border: `1px solid ${theme.border}` }}>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.status === 'submitted' ? theme.accent : theme.accentOrange, flexShrink: 0 }}></div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1 , minWidth: 0, overflow: "hidden"}}>
                           <div style={{ fontSize: 13, color: theme.textSecondary, fontWeight: 500 }}>Assignment — {s.date}</div>
                           <div style={{ fontSize: 11, color: theme.textMuted, marginTop: 2 }}>
                             {s.status === 'submitted' ? `✅ Submitted • Score: ${score}` : `⏳ In Progress • ${answered} questions answered`}
