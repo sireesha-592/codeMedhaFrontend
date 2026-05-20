@@ -17,7 +17,7 @@ const toArray = (val) => {
   return [];
 };
 
-export default function AttendanceCalendar() {
+export default function AttendanceCalendar({ courseId: courseIdProp }) {
   const { user, token } = useAuth();
   const navigate        = useNavigate();
   const today           = new Date();
@@ -41,7 +41,7 @@ export default function AttendanceCalendar() {
   const [backendStats, setBackendStats] = useState({ attendancePercentage: 0, present: 0, absent: 0, total: 0, currentStreak: 0 });
 
   const gridRef  = useRef(null);
-  const courseId = user?.enrolledCourse;
+  const courseId = courseIdProp || user?.enrolledCourse;
   const headers  = { Authorization: `Bearer ${token}` };
 
   const loadBackendStats = async () => {

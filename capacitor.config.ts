@@ -22,9 +22,7 @@ const config: CapacitorConfig = {
   },
   // FIX: Safe area insets for Android status bar + navigation bar
   server: {
-    
     androidScheme: 'https',
-    
   },
 };
 
