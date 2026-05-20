@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext();
-const API = '';
+const API = 'https://codemedha-production-47c1.up.railway.app';
 
 export const AuthProvider = ({ children }) => {
 
@@ -12,24 +12,32 @@ export const AuthProvider = ({ children }) => {
   };
 
   const getCurrentKeys = () => {
-    const path = window.location.pathname;
-    if (path.startsWith('/admin'))   return { u: 'lms_user_admin',   t: 'lms_token_admin'   };
-    if (path.startsWith('/trainer')) return { u: 'lms_user_trainer', t: 'lms_token_trainer' };
-    return                                  { u: 'lms_user_student', t: 'lms_token_student' };
+    const path = window.location.hash || window.location.pathname;
+    if (path.includes('/admin'))   return { u: 'lms_user_admin',   t: 'lms_token_admin'   };
+    if (path.includes('/trainer')) return { u: 'lms_user_trainer', t: 'lms_token_trainer' };
+    return                                { u: 'lms_user_student', t: 'lms_token_student' };
   };
 
   const { u: USER_KEY, t: TOKEN_KEY } = getCurrentKeys();
+
+  // ── FIX: isLoading prevents PrivateRoute from redirecting before auth is read ──
+  const [isLoading, setIsLoading] = useState(true);
 
   const [user,  setUser]  = useState(() => {
     try { return JSON.parse(localStorage.getItem(USER_KEY)) || null; } catch { return null; }
   });
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || null);
 
-  // Auto-refresh on app load
+  // Auto-refresh on app load — sets isLoading=false when done
   useEffect(() => {
     const { u, t } = getCurrentKeys();
     const storedToken = localStorage.getItem(t);
-    if (!storedToken) return;
+
+    if (!storedToken) {
+      setIsLoading(false);
+      return;
+    }
+
     fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${storedToken}` } })
       .then(r => r.ok ? r.json() : null)
       .then(freshUser => {
@@ -38,7 +46,11 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem(u, JSON.stringify(freshUser));
         localStorage.setItem('user', JSON.stringify(freshUser));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        // ── CRITICAL: mark auth as ready regardless of network result ──
+        setIsLoading(false);
+      });
   }, []);
 
   // Tab/browser close lo sendBeacon tho logout record cheyyi
@@ -101,7 +113,6 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    // Logout time record cheyyi
     const sessionId    = localStorage.getItem('lms_session_id');
     const sessionToken = localStorage.getItem('lms_session_token');
     if (sessionId && sessionToken) {
@@ -126,7 +137,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

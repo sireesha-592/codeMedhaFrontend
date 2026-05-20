@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { io } from 'socket.io-client';
 import api from '../api';
 
-const API = process.env.REACT_APP_API_URL || "";
+const API = 'https://codemedha-production-47c1.up.railway.app';
 const VIS_OPTIONS = [
   { value: 'everyone', label: '🌐 Everyone',    desc: 'All students + trainer + admin', color: '#00d4aa' },
   { value: 'trainer',  label: '👨‍🏫 Trainer only', desc: 'Only trainer & admin see this',  color: '#7c6af5' },
@@ -41,7 +41,14 @@ export default function GroupChatPage() {
 
   // Always verify courseId via server — fixes stale localStorage/URL params
   // Redirects to correct courseId if URL has a stale/wrong one
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [courseId, setCourseId] = useState(urlCourseId || '');
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   useEffect(() => {
     if (!token || urlCourseId) return;
     api.get(`${API}/api/chat/active-course`, { headers: { Authorization: `Bearer ${token}` } })
@@ -131,7 +138,7 @@ export default function GroupChatPage() {
     if (!userId || !courseId || !token) return;
 
     // Always create a fresh socket for this mount
-    const s = io(API, {
+    const s = io('https://codemedha-production-47c1.up.railway.app', {
       transports: ['websocket'],
       reconnection: true,
       auth: { token },
@@ -234,7 +241,7 @@ export default function GroupChatPage() {
       <Sidebar activePath="/chat" courseId={courseId} />
 
       {/* ── Main Chat ── */}
-      <main style={{ flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden', paddingTop: isMobile ? 56 : 0 }}>
 
         {/* Header */}
         <div style={{ padding: '16px 24px', borderBottom: `1px solid ${theme.border}`, background: theme.cardBg, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>

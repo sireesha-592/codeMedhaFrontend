@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api, { API_BASE } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const DAYS   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const API    = 'http://localhost:5000';
+// ✅ localhost REMOVED — using API_BASE from src/api.js
 
 const isSunday = (dateStr) => new Date(dateStr + 'T00:00:00').getDay() === 0;
 
@@ -29,6 +29,14 @@ export default function AttendanceCalendar() {
   const [dateData,     setDateData]     = useState({});
   const [loading,      setLoading]      = useState(false);
   const [expiredModal, setExpiredModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 480);
+
+  // Respond to resize
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 480);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const [backendStats, setBackendStats] = useState({ attendancePercentage: 0, present: 0, absent: 0, total: 0, currentStreak: 0 });
 
@@ -38,7 +46,7 @@ export default function AttendanceCalendar() {
 
   const loadBackendStats = async () => {
     try {
-      const res = await axios.get(`${API}/api/attendance/stats`, { headers });
+      const res = await api.get('/api/attendance/stats');
       setBackendStats(res.data);
     } catch (e) { console.error('stats error', e); }
   };
@@ -63,7 +71,7 @@ export default function AttendanceCalendar() {
     let s;
     try {
       const { io } = require('socket.io-client');
-      s = io(API, { transports: ['websocket'] });
+      s = io(API_BASE, { transports: ['websocket'] });
       s.emit('join', { userId: user._id || user.id });
       s.on('attendance-update', (data) => {
         loadMonthData();
@@ -115,9 +123,9 @@ export default function AttendanceCalendar() {
 
           try {
             const [attRes, subRes, clsRes] = await Promise.all([
-              axios.get(`${API}/api/attendance/${user._id}/${dateStr}`, { headers }),
-              axios.get(`${API}/api/submissions/${user._id}/${dateStr}`, { headers }),
-              axios.get(`${API}/api/classes/date/${courseId}/${dateStr}`, { headers }),
+              api.get(`/api/attendance/${user._id}/${dateStr}`),
+              api.get(`/api/submissions/${user._id}/${dateStr}`),
+              api.get(`/api/classes/date/${courseId}/${dateStr}`),
             ]);
 
             // ── KEY FIX: always normalize to array ──
@@ -449,18 +457,18 @@ export default function AttendanceCalendar() {
 const pill = (color) => ({ flex: 1, textAlign: 'center', fontSize: 10, fontWeight: 600, padding: '3px 0', borderRadius: 6, background: color+'22', color });
 
 const s = {
-  outerWrapper: { display: 'flex', flexDirection: 'column', height: '100%', background: '#fff', borderRadius: 16, padding: '14px 18px', boxSizing: 'border-box', overflow: 'hidden' },
+  outerWrapper: { display: 'flex', flexDirection: 'column', minHeight: '100%', background: '#fff', borderRadius: 16, padding: '14px 12px', boxSizing: 'border-box', overflowX: 'hidden' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, flexShrink: 0 },
   monthTitle: { fontSize: 17, fontWeight: 700, color: '#1e3a5f', margin: 0 },
   loadingTxt: { fontSize: 10, color: '#aaa', display: 'block' },
-  navBtn: { background: '#f0f4f8', border: 'none', fontSize: 22, cursor: 'pointer', color: '#1e3a5f', padding: '2px 14px', borderRadius: 8, fontWeight: 700, lineHeight: 1.6 },
-  statsBar: { display: 'flex', alignItems: 'center', background: '#0f172a', borderRadius: 12, padding: '10px 16px', marginBottom: 10, flexShrink: 0 },
-  statCard: { display: 'flex', alignItems: 'center', gap: 10, flex: 1, justifyContent: 'center' },
+  navBtn: { background: '#f0f4f8', border: 'none', fontSize: 22, cursor: 'pointer', color: '#1e3a5f', padding: '4px 12px', borderRadius: 8, fontWeight: 700, lineHeight: 1.6, minWidth: 40, minHeight: 36 },
+  statsBar: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', background: '#0f172a', borderRadius: 12, padding: '10px 12px', marginBottom: 10, flexShrink: 0 },
+  statCard: { display: 'flex', alignItems: 'center', gap: 8, flex: '1 1 auto', minWidth: '80px', justifyContent: 'center' },
   statRing: { position: 'relative', flexShrink: 0 },
   ringLabel: { position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: 9, fontWeight: 700, color: '#e2e8f0' },
   statValue: { fontSize: 14, fontWeight: 700, color: '#f1f5f9', lineHeight: 1 },
   statName:  { fontSize: 10, color: '#64748b', marginTop: 2 },
-  statDivider: { width: 1, height: 36, background: '#1e293b', flexShrink: 0 },
+  statDivider: { width: 1, height: 30, background: '#1e293b', flexShrink: 0, alignSelf: 'center' },
   dayRow: { display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4, flexShrink: 0 },
-  dayLabel: { textAlign: 'center', fontSize: 12, fontWeight: 600, padding: '3px 0' },
+  dayLabel: { textAlign: 'center', fontSize: 11, fontWeight: 600, padding: '3px 0' },
 };

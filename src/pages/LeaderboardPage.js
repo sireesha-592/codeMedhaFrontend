@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
 
-const API = process.env.REACT_APP_API_URL || "";
+const API = 'https://codemedha-production-47c1.up.railway.app';
 const medal = (rank) => {
   if (rank === 1) return '🥇';
   if (rank === 2) return '🥈';
@@ -20,8 +20,15 @@ const LeaderboardPage = () => {
 
   const [data, setData]       = useState([]);
   const [myId, setMyId]       = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter]   = useState('score'); // 'score' | 'attendance' | 'composite'
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => { fetchLeaderboard(); }, []);
 
@@ -53,7 +60,7 @@ const LeaderboardPage = () => {
     <div style={{ display: 'flex', minHeight: '100vh', overflowX: 'hidden', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans','Segoe UI',sans-serif" }}>
       <Sidebar activePath="/leaderboard" courseId={user&&user.enrolledCourse} />
 
-      <main style={{ flex: 1, padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <main style={{ flex: 1, padding: isMobile ? '60px 12px 80px' : '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0, overflowX: 'hidden', boxSizing: 'border-box' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -107,7 +114,7 @@ const LeaderboardPage = () => {
         {/* Table */}
         <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 16, overflow: 'hidden' }}>
           {/* Column headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '60px 1fr 120px 120px 120px 100px', gap: 12, padding: '12px 20px', background: theme.pageBg, borderBottom: `1px solid ${theme.border}`, fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '36px 1fr 80px 80px' : '60px 1fr 120px 120px 120px 100px', gap: 12, padding: '12px 20px', background: theme.pageBg, borderBottom: `1px solid ${theme.border}`, fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             <div>Rank</div>
             <div>Student</div>
             <div style={{ textAlign: 'center' }}>Total Score</div>
@@ -132,7 +139,7 @@ const LeaderboardPage = () => {
               const isTop3 = rank <= 3;
               return (
                 <div key={s.userId}
-                  style={{ display: 'grid', gridTemplateColumns: '60px 1fr 120px 120px 120px 100px', gap: 12, padding: '14px 20px', alignItems: 'center', borderBottom: `1px solid ${theme.border}`, background: isMe ? (isDark ? '#7c6af515' : '#7c6af508') : 'transparent', transition: 'background 0.2s' }}>
+                  style={{ display: 'grid', gridTemplateColumns: isMobile ? '36px 1fr 80px 80px' : '60px 1fr 120px 120px 120px 100px', gap: 12, padding: '14px 20px', alignItems: 'center', borderBottom: `1px solid ${theme.border}`, background: isMe ? (isDark ? '#7c6af515' : '#7c6af508') : 'transparent', transition: 'background 0.2s' }}>
 
                   {/* Rank */}
                   <div style={{ fontSize: isTop3 ? 22 : 15, fontWeight: 700, color: isTop3 ? undefined : theme.textMuted, textAlign: 'center' }}>

@@ -5,7 +5,7 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
-const API = process.env.REACT_APP_API_URL || "";
+const API = 'https://codemedha-production-47c1.up.railway.app';
 // Technology icon/color lookup
 const TECH_STYLES = {
   'mongodb':    { color: '#13aa52', text: '#fff', icon: '🍃', desc: 'NoSQL Database' },
@@ -84,6 +84,7 @@ export default function MyCourse() {
 
   const [courseInfo,  setCourseInfo]  = useState(null);
   const [courseId,    setCourseId]    = useState(user?.enrolledCourse || null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activePhase, setActivePhase] = useState(null);
   const [loading,     setLoading]     = useState(true);
   const [availableCourses, setAvailableCourses] = useState([]);
@@ -108,6 +109,12 @@ export default function MyCourse() {
   const [expandedNotes, setExpandedNotes] = useState({});
 
   const todayStr = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     if (!token) return;
@@ -219,11 +226,11 @@ export default function MyCourse() {
   ];
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: theme.pageBg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: theme.pageBg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif", overflowX: 'hidden' }}>
       <Sidebar activePath="/my-course" courseId={user&&user.enrolledCourse} />
 
       {/* Main */}
-      <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', background: theme.pageBg, position: 'relative' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden', background: theme.pageBg, position: 'relative' }}>
         {/* Hero */}
         <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)', padding: '40px 40px 40px', position: 'relative', zIndex: 0, flexShrink: 0 }}>
           <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, #7c6af520, transparent)', pointerEvents: 'none' }} />
@@ -247,7 +254,7 @@ export default function MyCourse() {
           </div>
         </div>
 
-        <div style={{ padding: '32px 40px', display: 'flex', flexDirection: 'column', gap: 28, position: 'relative', zIndex: 1, background: theme.pageBg }}>
+        <div style={{ padding: isMobile ? '60px 12px 80px' : '32px 40px', display: 'flex', flexDirection: 'column', gap: 28, position: 'relative', zIndex: 1, background: theme.pageBg, boxSizing: 'border-box' }}>
 
           {/* Not enrolled — show available courses */}
           {!loading && !courseInfo && !user?.enrolledCourse && (

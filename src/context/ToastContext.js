@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 
-const API = 'http://localhost:5000';
+import { API_BASE } from '../api';
+const API = API_BASE;
 const ToastContext = createContext();
 
 // ─── Browser Notification helpers ────────────────────────

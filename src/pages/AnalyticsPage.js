@@ -6,12 +6,13 @@ import { useTheme } from '../context/ThemeContext';
 import { useSocket } from '../hooks/useSocket';
 import api from '../api';
 
-const API = process.env.REACT_APP_API_URL || "";
+const API = 'https://codemedha-production-47c1.up.railway.app';
 const AnalyticsPage = () => {
   const { user, token } = useAuth();
   const { isDark, toggleTheme, theme } = useTheme();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [liveUpdate, setLiveUpdate] = useState(null);
@@ -113,6 +114,12 @@ const AnalyticsPage = () => {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   useEffect(() => { if (user) fetchAnalytics(); }, [user, fetchAnalytics]);
@@ -315,7 +322,7 @@ const AnalyticsPage = () => {
     <div style={{ display: 'flex', minHeight: '100vh', overflowX: 'hidden', background: theme.pageBg, color: theme.textPrimary, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
       <Sidebar activePath="/analytics" courseId={user&&user.enrolledCourse} />
 
-      <main style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <main style={{ flex: 1, minWidth: 0, padding: isMobile ? '60px 12px 80px' : '32px', overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', gap: 20, boxSizing: 'border-box' }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
@@ -358,7 +365,7 @@ const AnalyticsPage = () => {
         ) : (
           <>
             {/* Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14 }}>
               {[
                 { label: 'Attendance Rate',   value: `${Math.round(data.attPercent)}%`,       icon: '📅', color: theme.accent,        sub: `${data.present} present, ${data.absent} absent` },
                 { label: 'Current Streak',    value: `${data.streak} days`,                   icon: '🔥', color: theme.accentOrange,   sub: 'Consecutive days present' },
@@ -366,7 +373,7 @@ const AnalyticsPage = () => {
                 { label: 'Completion Rate',   value: `${data.assignments.total > 0 ? Math.round((data.assignments.submitted / data.assignments.total) * 100) : 0}%`, icon: '🎯', color: '#f56aa0', sub: 'Assignment completion' },
               ].map((s, i) => (
                 <div key={i} style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: '18px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? 8 : 0 }}>
                     <span style={{ fontSize: 20 }}>{s.icon}</span>
                     <div style={{ width: 7, height: 7, borderRadius: '50%', background: s.color }}></div>
                   </div>
@@ -378,7 +385,7 @@ const AnalyticsPage = () => {
             </div>
 
             {/* Weekly + Monthly Charts */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
               <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 16, padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: theme.textSecondary }}>📅 This Week's Attendance</div>
                 {data.weeklyAtt.length === 0 ? (
@@ -424,7 +431,7 @@ const AnalyticsPage = () => {
               {data.assignments.total === 0 ? (
                 <p style={{ color: theme.textMuted, fontSize: 13 }}>No assignments found yet.</p>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 16 : 32 }}>
                   <div style={{ flexShrink: 0 }}>
                     {(() => {
                       const total = data.assignments.total || 1;
@@ -486,7 +493,7 @@ const AnalyticsPage = () => {
                     {data.prediction.workingDaysLeft} working days left
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 12 }}>
                   {[
                     { label: '🏆 Best Case',    value: data.prediction.predictedBest,  color: '#1D9E75', desc: 'If you attend all remaining' },
                     { label: '📈 Current Rate', value: data.prediction.predictedSame,  color: theme.accent, desc: 'If you continue as-is' },

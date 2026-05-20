@@ -12,9 +12,16 @@ const WeeklyReportPage = () => {
   const navigate = useNavigate();
   const printRef = useRef();
   const [report, setReport]   = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
   const tok = token || localStorage.getItem('lms_token_student') || localStorage.getItem('token');
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => { fetchReport(); }, []);
 
@@ -55,7 +62,7 @@ const WeeklyReportPage = () => {
   ];
 
   if (loading) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:C.bg,color:C.muted,flexDirection:'column',gap:12}}>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',background:C.bg,color:C.muted,flexDirection:'column',gap:12}}>
       <div style={{fontSize:32}}>📊</div>
       <div style={{fontSize:14}}>Loading your weekly report...</div>
     </div>
@@ -72,9 +79,9 @@ const WeeklyReportPage = () => {
       {/* Sidebar */}
       <Sidebar activePath="/weekly-report" courseId={user&&user.enrolledCourse} />
       {/* Main */}
-      <main style={{flex: 1, minWidth: 0, overflow: "hidden",padding:'32px',overflowY:'auto'}}>
+      <main style={{flex: 1, minWidth: 0, padding: isMobile ? '60px 12px 80px' : '32px', overflowY:'auto', overflowX:'hidden', boxSizing:'border-box'}}>
         {/* Header */}
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:28}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:28, flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? 8 : 0}}>
           <div>
             <h2 style={{fontSize:22,fontWeight:800,margin:0,color:C.text}}>📈 Weekly Performance Report</h2>
             {report?.period && <p style={{fontSize:13,color:C.muted,margin:'4px 0 0'}}>{report.period.from} → {report.period.to} · {user?.name}</p>}
@@ -96,7 +103,7 @@ const WeeklyReportPage = () => {
             </div>
 
             {/* Summary Cards */}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:14}}>
+            <div style={{display:'grid',gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',gap:14}}>
               {[
                 {label:'Attendance',  value:`${pct}%`,           icon:'📅',color:pctColor,  sub:`${att.present||0}P / ${att.absent||0}A`},
                 {label:'Assignments', value:asgn.submitted||0,   icon:'✅',color:'#10b981', sub:`${asgn.pending||0} pending`},
@@ -115,7 +122,7 @@ const WeeklyReportPage = () => {
             {/* Daily Attendance */}
             <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:'20px'}}>
               <div style={{fontSize:14,fontWeight:700,color:C.muted,marginBottom:16}}>📅 Daily Attendance — This Week</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:10}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:isMobile ? 4 : 10}}>
                 {(att.days||[]).map((day,i) => (
                   <div key={i} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6}}>
                     <div style={{fontSize:11,fontWeight:600,color:C.muted}}>{day.day}</div>

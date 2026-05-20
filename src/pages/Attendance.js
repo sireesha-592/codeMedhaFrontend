@@ -1,56 +1,91 @@
 import Sidebar from '../components/Sidebar';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AttendanceCalendar from '../components/AttendanceCalendar';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 export default function Attendance() {
-  const { logout, user } = useAuth();
-  const { isDark, toggleTheme, theme } = useTheme();
+  const { user } = useAuth();
+  const { toggleTheme, theme } = useTheme();
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const todayDate = new Date().toISOString().split('T')[0];
 
-  const navItems = [
-    { icon: '⊞', label: 'Dashboard',     path: '/dashboard' },
-    { icon: '📅', label: 'Attendance',    path: '/attendance',   active: true },
-    { icon: '🎥', label: 'Classes',       path: '/courses' },
-    { icon: '📚', label: 'My Course',     path: '/my-course' },
-    { icon: '📝', label: 'Assignments',   path: `/assignment/${todayDate}` },
-    { icon: '💬', label: 'Group Chat',    path: user?.enrolledCourse ? `/chat/${user.enrolledCourse}` : '/courses' },
-    { icon: '🔔', label: 'Notifications', path: '/notifications' },
-    { icon: '📊', label: 'Analytics',     path: '/analytics' },
-    { icon: '🏆', label: 'Leaderboard',   path: '/leaderboard' },
-    { icon: '👤', label: 'Profile',       path: '/profile' },
-  ];
-
   return (
-    <div style={{ ...styles.container, background: theme.pageBg, color: theme.textPrimary }}>
-
+    <div style={{
+      display: 'flex',
+      /* KEY FIX: use minHeight instead of height so content isn't clipped
+         on small screens or when virtual keyboard is open */
+      minHeight: '100vh',
+      background: theme.pageBg,
+      color: theme.textPrimary,
+      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+      overflowX: 'hidden',
+    }}>
       {/* ── Sidebar ── */}
-      <Sidebar activePath="/attendance" courseId={user&&user.enrolledCourse} />
+      <Sidebar activePath="/attendance" courseId={user && user.enrolledCourse} />
 
       {/* ── Main ── */}
-      <div style={{ ...styles.main, background: theme.pageBg }}>
-
+      <div style={{
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        /* Mobile: top padding for hamburger, bottom for bottom nav */
+        padding: isMobile ? '60px 12px 80px' : '28px 28px 20px',
+        background: theme.pageBg,
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
+      }}>
         {/* Top bar */}
-        <div style={styles.topBar}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: 20,
+          flexWrap: 'wrap',
+          gap: 8,
+          flexShrink: 0,
+        }}>
           <div>
-            <h2 style={{ ...styles.pageTitle, color: theme.textPrimary }}>📅 Attendance</h2>
-            <div style={{ ...styles.pageSubtitle, color: theme.textMuted }}>Track your daily class attendance</div>
+            <h2 style={{ fontSize: isMobile ? 18 : 22, fontWeight: 800, margin: 0, marginBottom: 4, color: theme.textPrimary }}>
+              📅 Attendance
+            </h2>
+            <div style={{ fontSize: 13, color: theme.textMuted }}>Track your daily class attendance</div>
           </div>
-          <div style={{ ...styles.monthBadge, background: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.accent }}>
-            <span style={styles.monthDot} />
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 7,
+            padding: '8px 18px', borderRadius: 20,
+            fontSize: 12, fontWeight: 600, letterSpacing: 0.5,
+            background: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.accent,
+          }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#00d4aa', display: 'inline-block', boxShadow: '0 0 6px #00d4aa' }} />
             This Month
           </div>
         </div>
 
-        {/* Calendar */}
-        <div style={styles.calendarWrapper}>
+        {/* Calendar wrapper — KEY FIX: don't use overflow:hidden, use a natural flow so
+            the calendar can grow to fit its content on small screens */}
+        <div style={{
+          flex: 1,
+          minWidth: 0,
+          /* Allow natural scrolling instead of clipping */
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          /* Minimum height so calendar is usable */
+          minHeight: isMobile ? 'auto' : 400,
+          WebkitOverflowScrolling: 'touch',
+        }}>
           <AttendanceCalendar />
         </div>
-
       </div>
 
       <style>{`
@@ -62,76 +97,3 @@ export default function Attendance() {
     </div>
   );
 }
-
-const styles = {
-  container: {
-    display: 'flex',
-    height: '100vh',
-    overflow: 'hidden',
-    fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-  },
-  sidebar: {
-    width: 220,
-    flexShrink: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    padding: '24px 0',
-    height: '100vh',
-    overflowY: 'auto',
-  },
-  sidebarLogo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    padding: '0 20px 28px',
-  },
-  logoIcon: {
-    width: 34, height: 34,
-    background: 'linear-gradient(135deg, #00d4aa, #7c6af5)',
-    borderRadius: 10,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 16,
-  },
-  logoText: { fontSize: 18, fontWeight: 700, letterSpacing: '-0.5px' },
-  nav: { flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', gap: 2, padding: '0 10px' },
-  navItem: {
-    display: 'flex', alignItems: 'center', gap: 10,
-    padding: '10px 14px', borderRadius: 10, border: 'none',
-    fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
-    textAlign: 'left', transition: 'all 0.2s', width: '100%',
-  },
-  navIcon: { fontSize: 16, width: 20, textAlign: 'center' },
-  sidebarUser: {
-    display: 'flex', alignItems: 'center', gap: 10,
-    padding: '20px', marginTop: 'auto',
-  },
-  userAvatar: {
-    width: 36, height: 36, borderRadius: '50%',
-    background: 'linear-gradient(135deg, #00d4aa, #7c6af5)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    fontSize: 14, fontWeight: 700, flexShrink: 0,
-  },
-  userName: { fontSize: 13, fontWeight: 600 },
-  userRole: { fontSize: 11, marginTop: 2 },
-  main: {
-    flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column',
-    padding: '28px 28px 20px', overflow: 'hidden', minWidth: 0,
-  },
-  topBar: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-    marginBottom: 20, flexShrink: 0,
-  },
-  pageTitle: { fontSize: 22, fontWeight: 800, margin: 0, marginBottom: 4 },
-  pageSubtitle: { fontSize: 13 },
-  monthBadge: {
-    display: 'flex', alignItems: 'center', gap: 7,
-    padding: '8px 18px', borderRadius: 20,
-    fontSize: 12, fontWeight: 600, letterSpacing: 0.5,
-  },
-  monthDot: {
-    width: 7, height: 7, borderRadius: '50%',
-    background: '#00d4aa', display: 'inline-block',
-    boxShadow: '0 0 6px #00d4aa',
-  },
-  calendarWrapper: { flex: 1, minWidth: 0, overflow: "hidden", minHeight: 0, overflow: 'hidden' },
-};

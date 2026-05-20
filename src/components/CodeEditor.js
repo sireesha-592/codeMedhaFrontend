@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 
-const API = 'http://localhost:5000';
+import { API_BASE } from '../api';
+const API = API_BASE;
 const TABS = ['html','css','javascript','react'];
 const TAB_META = {
   html:       { label: 'HTML',        icon: '🌐', color: '#e44d26' },

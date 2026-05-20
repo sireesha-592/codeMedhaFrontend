@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 
-const API = 'http://localhost:5000';
+import { API_BASE } from '../api';
+const API = API_BASE;
 
 // Helper: show a browser notification popup
 const showNotification = (title, body, icon = '🔔') => {

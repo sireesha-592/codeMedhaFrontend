@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
 
-const API = 'https://codemedha-production.up.railway.app';
+const API = 'https://codemedha-production-47c1.up.railway.app';
 
 const BADGES = [
   { id: 'first_class',    icon: '🎓', label: 'First Class',    desc: 'Watched your first class',     color: '#7c6af5' },
@@ -29,6 +29,13 @@ const ProfilePage = () => {
   const [parentPhone, setParentPhone] = useState(user?.parentPhone || '');
   const [savingParent, setSavingParent] = useState(false);
   const [parentSaved, setParentSaved]   = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => { if (user) fetchProfileData(); }, [user]);
 
@@ -114,7 +121,7 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: theme.pageBg }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: theme.pageBg }}>
         <div style={{ width: 36, height: 36, border: `3px solid ${theme.border}`, borderTop: `3px solid ${theme.accent}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -126,19 +133,19 @@ const ProfilePage = () => {
       {/* Sidebar */}
       <Sidebar activePath="/profile" courseId={user&&user.enrolledCourse} />
 
-      <main style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <main style={{ flex: 1, minWidth: 0, overflow: "hidden", padding: isMobile ? '16px 14px 80px' : '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Hero */}
-        <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 20, padding: '28px', position: 'relative', overflow: 'hidden', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 20, padding: isMobile ? '18px 16px' : '28px', position: 'relative', overflow: 'hidden', display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: `radial-gradient(circle at 20% 50%, ${theme.accent}0a 0%, transparent 60%)`, pointerEvents: 'none' }}></div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20, position: 'relative' }}>
-            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 800, position: 'relative', flexShrink: 0 }}>
+            <div style={{ width: isMobile ? 56 : 80, height: isMobile ? 56 : 80, borderRadius: '50%', background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? 22 : 32, fontWeight: 800, position: 'relative', flexShrink: 0 }}>
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: `2px solid ${theme.accent}44` }}></div>
             </div>
             <div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: theme.textPrimary, marginBottom: 4 }}>{user?.name || 'Student'}</div>
+              <div style={{ fontSize: isMobile ? 17 : 22, fontWeight: 800, color: theme.textPrimary, marginBottom: 4 }}>{user?.name || 'Student'}</div>
               <div style={{ fontSize: 13, color: theme.textMuted, marginBottom: 10 }}>{user?.email || ''}</div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 20, background: theme.accentPurple + '22', color: theme.accentPurple, border: `1px solid ${theme.accentPurple}44` }}>
                   {user?.role === 'teacher' ? '👨‍🏫 Teacher' : '💻 MERN Stack Developer'}
                 </span>
@@ -148,14 +155,14 @@ const ProfilePage = () => {
               </div>
             </div>
           </div>
-          <button style={{ background: 'transparent', border: '1px solid #f5555544', color: '#f55', fontSize: 13, fontWeight: 600, padding: '8px 16px', borderRadius: 10, cursor: 'pointer', position: 'relative', zIndex: 1 }} onClick={handleLogout}>⏻ Logout</button>
+          <button style={{ background: 'transparent', border: '1px solid #f5555544', color: '#f55', fontSize: 13, fontWeight: 600, padding: '8px 12px', borderRadius: 10, cursor: 'pointer', position: 'relative', zIndex: 1, flexShrink: 0, whiteSpace: 'nowrap' }} onClick={handleLogout}>{isMobile ? '⏻' : '⏻ Logout'}</button>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 4, width: 'fit-content' }}>
+        <div style={{ display: 'flex', gap: 4, background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 12, padding: 4, overflowX: 'auto', WebkitOverflowScrolling: 'touch', maxWidth: '100%', flexShrink: 0 }}>
           {['overview', 'parent', 'badges', 'activity'].map(tab => (
             <button key={tab}
-              style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: activeTab === tab ? theme.hoverBg : 'transparent', color: activeTab === tab ? theme.textPrimary : theme.textMuted, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+              style={{ padding: isMobile ? '8px 14px' : '8px 20px', borderRadius: 8, border: 'none', background: activeTab === tab ? theme.hoverBg : 'transparent', color: activeTab === tab ? theme.textPrimary : theme.textMuted, fontSize: isMobile ? 12 : 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap', flexShrink: 0 }}
               onClick={() => setActiveTab(tab)}>
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
@@ -165,7 +172,7 @@ const ProfilePage = () => {
         {/* Overview */}
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 14 }}>
               {[
                 { label: 'Attendance',    value: `${attPercent}%`,     icon: '📅', color: theme.accent },
                 { label: 'Total Classes', value: stats.totalClasses,    icon: '🎥', color: theme.accentPurple },
@@ -200,7 +207,7 @@ const ProfilePage = () => {
 
             <div style={{ background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 14, padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: theme.textSecondary }}>👤 Account Info</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
                 {[
                   { label: 'Full Name',    value: user?.name    || 'N/A' },
                   { label: 'Email',        value: user?.email   || 'N/A' },
@@ -226,7 +233,7 @@ const ProfilePage = () => {
             <p style={{ fontSize: 13, color: theme.textMuted, margin: 0 }}>
               These details are used by admin to send attendance notifications and weekly performance reports to your parents via WhatsApp.
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: theme.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Parent / Guardian Name</label>
                 <input
@@ -263,7 +270,7 @@ const ProfilePage = () => {
 
         {/* Badges */}
         {activeTab === 'badges' && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 14 }}>
             {BADGES.map(badge => {
               const earned = earnedBadges.includes(badge.id);
               return (

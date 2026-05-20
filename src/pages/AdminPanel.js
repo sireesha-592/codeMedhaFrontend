@@ -5,8 +5,8 @@ import { useTheme } from '../context/ThemeContext';
 import { io } from 'socket.io-client';
 import Navbar from '../components/Navbar';
 
-const API        = '';
-const SOCKET_URL = '';
+const API        = 'https://codemedha-production-47c1.up.railway.app';
+const SOCKET_URL = 'https://codemedha-production-47c1.up.railway.app';
 
 const SECTIONS = [
   { key: 'A', label: 'Section A', desc: 'Easy',   marks: 1, color: '#1D9E75', light: '#e6f7f2', count: 20 },
@@ -127,7 +127,7 @@ function AdminDashboard({ token, T, user }) {
       {/* Welcome Banner */}
       <div style={{
         background:'linear-gradient(135deg, #1e3a5f 0%, #0f2027 50%, #1a1a3e 100%)',
-        borderRadius:20, padding:'32px 36px', marginBottom:28,
+        borderRadius:20, padding:'20px 16px', marginBottom:20,
         border:'1px solid #2a2a5e', position:'relative', overflow:'hidden'
       }}>
         <div style={{position:'absolute',top:-40,right:-40,width:200,height:200,
@@ -1565,7 +1565,7 @@ function AdminReportsWhatsApp({ token }) {
   };
 
   const hdr = { Authorization: `Bearer ${token}` };
-  const API2 = '';
+  const API2 = 'https://codemedha-production-47c1.up.railway.app';
 
   React.useEffect(() => {
     api.get(`${API2}/api/trainer/students`, { headers: hdr })
@@ -1980,7 +1980,7 @@ function AdminGroupChat({ user, token }) {
   const currentVis = VIS_OPTIONS.find(v => v.value === visibility);
 
   return (
-    <div style={{ ...S.card, background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, display: 'flex', flexDirection: 'column', height: 'calc(100vh - 280px)', minHeight: 500 }}>
+    <div style={{ ...S.card, background: T.card, border: `1px solid ${T.border}`, borderRadius: 14, display: 'flex', flexDirection: 'column', height: 'calc(100dvh - 280px)', minHeight: 340 }}>
       {/* Chat header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
         <h3 style={{ ...S.cardTitle, margin: 0 }}>💬 Group Chat</h3>
@@ -2110,7 +2110,7 @@ function AdminGroupChat({ user, token }) {
 //  STYLES
 // ════════════════════════════════════════════════════════════
 const S = {
-  appWrapper:    { display: 'flex', minHeight: '100vh', fontFamily: "'DM Sans','Segoe UI',sans-serif", paddingTop: 56 },
+  appWrapper:    { display: 'flex', minHeight: '100vh', fontFamily: "'DM Sans','Segoe UI',sans-serif", paddingTop: 56, overflowX: 'hidden' },
   sidebar:       { width: 230, display: 'flex', flexDirection: 'column', padding: '24px 0', flexShrink: 0 },
   sidebarHeader: { display: 'flex', alignItems: 'center', gap: 12, padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: 8 },
   sidebarName:   { color: '#fff', fontWeight: 700, fontSize: 14 },
@@ -2184,7 +2184,7 @@ function AdminSessionTracker({ token }) {
   };
 
   const hdr = { Authorization: `Bearer ${token}` };
-  const API2 = "";
+  const API2 = "https://codemedha-production-47c1.up.railway.app";
 
   const fmtDateTime = (d) => {
     if (!d) return "—";

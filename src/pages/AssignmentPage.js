@@ -104,7 +104,7 @@ export default function AssignmentPage() {
   const doAutoSubmit = useCallback(async () => {
     if (submitted) return;
     try {
-      await api.patch('http://localhost:5000/api/submissions/submit',
+      await api.patch('/api/submissions/submit',
         { traineeId: user._id, date }, { headers });
       setSubmitted(true);
       setIsEditing(false);
@@ -137,7 +137,7 @@ export default function AssignmentPage() {
     let s;
     try {
       const { io } = require('socket.io-client');
-      s = io('http://localhost:5000', {
+      s = io(require('../api').API_BASE, {
         transports: ['websocket'],
         reconnection: true,
         auth: { token },
@@ -165,7 +165,7 @@ export default function AssignmentPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const qRes = await api.get(`http://localhost:5000/api/questions/${courseId}/${date}`, { headers });
+      const qRes = await api.get(`/api/questions/${courseId}/${date}`, { headers });
       // Backend returns { questions, deadline } — deadline is ISO string or null
       const { questions: allQs, deadline: deadlineISO } = qRes.data;
 
@@ -186,7 +186,7 @@ export default function AssignmentPage() {
         C: allQs.filter(q => q.section === 'C'),
       };
       setQuestions(grouped);
-      const initRes = await api.post('http://localhost:5000/api/submissions/init',
+      const initRes = await api.post('/api/submissions/init',
         { traineeId: user._id, courseId, date, secAQuestions: grouped.A, secBQuestions: grouped.B, secCQuestions: grouped.C },
         { headers });
       setSubmission(initRes.data);
@@ -228,7 +228,7 @@ export default function AssignmentPage() {
     if (saveTimer.current[qid]) clearTimeout(saveTimer.current[qid]);
     saveTimer.current[qid] = setTimeout(async () => {
       try {
-        const res = await api.patch('http://localhost:5000/api/submissions/answer',
+        const res = await api.patch('/api/submissions/answer',
           { traineeId: user._id, date, section, questionId: qid, answerText: text, marks }, { headers });
         setSubmission(res.data);
       } catch (err) { console.error('Auto-save answer error:', err); }
@@ -243,7 +243,7 @@ export default function AssignmentPage() {
     // Cancel any pending debounce
     if (saveTimer.current[qid]) { clearTimeout(saveTimer.current[qid]); delete saveTimer.current[qid]; }
     try {
-      const res = await api.patch('http://localhost:5000/api/submissions/answer',
+      const res = await api.patch('/api/submissions/answer',
         { traineeId: user._id, date, section, questionId: qid, answerText: text, marks }, { headers });
       setSubmission(res.data);
     } catch (err) { console.error('Save question error:', err); }
@@ -268,7 +268,7 @@ export default function AssignmentPage() {
           const text = answers[qid] || '';
           if (text.trim().length > 0) {
             try {
-              await api.patch('http://localhost:5000/api/submissions/answer',
+              await api.patch('/api/submissions/answer',
                 { traineeId: user._id, date, section: sec, questionId: qid, answerText: text, marks: q.marks },
                 { headers });
             } catch (e) { console.error('Save before submit:', e); }
@@ -276,7 +276,7 @@ export default function AssignmentPage() {
         }
       }
       // Now submit
-      await api.patch('http://localhost:5000/api/submissions/submit', { traineeId: user._id, date }, { headers });
+      await api.patch('/api/submissions/submit', { traineeId: user._id, date }, { headers });
       setSubmitted(true);
       setIsEditing(false);
       window.dispatchEvent(new Event('assignment-submitted'));
@@ -315,7 +315,7 @@ export default function AssignmentPage() {
   };
 
   if (loading) return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', height:'100vh', background: theme.pageBg }}>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'100vh', background: theme.pageBg }}>
       <div style={{ width:32, height:32, border:`3px solid ${theme.border}`, borderTop:`3px solid ${theme.accent}`, borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
       <p style={{ color: theme.textMuted, marginTop:12 }}>Loading assignment...</p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -323,7 +323,7 @@ export default function AssignmentPage() {
   );
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100vh', background: theme.pageBg, overflow:'hidden', fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
+    <div style={{ display:'flex', flexDirection:'column', minHeight:'100vh', background: theme.pageBg, overflowX:'hidden', fontFamily:"'DM Sans','Segoe UI',sans-serif" }}>
 
       {/* Toast Stack */}
       <div style={{ position:'fixed', top:16, right:16, zIndex:9999, display:'flex', flexDirection:'column', gap:8, maxWidth:360 }}>
@@ -336,8 +336,8 @@ export default function AssignmentPage() {
       </div>
 
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:16, padding:'16px 24px', background: isDark?'#1a2740':'#1e3a5f', flexShrink:0, flexWrap:'wrap' }}>
-        <button style={{ background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', padding:'8px 14px', borderRadius:8, cursor:'pointer', fontSize:14 }} onClick={() => navigate('/attendance')}>← Back</button>
+      <div style={{ display:'flex', alignItems:'center', gap:16, padding: window.innerWidth < 768 ? '56px 12px 12px' : '16px 24px', background: isDark?'#1a2740':'#1e3a5f', flexShrink:0, flexWrap:'wrap' }}>
+        <button style={{ background:'rgba(255,255,255,0.15)', border:'none', color:'#fff', padding:'8px 14px', borderRadius:8, cursor:'pointer', fontSize:14 }} onClick={() => navigate(-1)}>← Back</button>
         <div>
           <h2 style={{ color:'#fff', fontSize:18, fontWeight:700, margin:0 }}>Assignment — {date}</h2>
           <p style={{ color:'#a0b4c8', fontSize:12, margin:'2px 0 0 0' }}>MERN Stack Developer Course</p>

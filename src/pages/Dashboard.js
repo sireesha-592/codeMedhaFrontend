@@ -6,7 +6,7 @@ import api from '../api';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 
-const API = process.env.REACT_APP_API_URL || "";
+const API = 'https://codemedha-production-47c1.up.railway.app';
 const Dashboard = () => {
   const { user, token } = useAuth();
   const { isDark, toggleTheme, theme } = useTheme();
@@ -128,7 +128,7 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: theme.pageBg, gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: theme.pageBg, gap: 16 }}>
         <div style={{ width: 40, height: 40, border: `3px solid ${theme.border}`, borderTop: `3px solid ${theme.accent}`, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
         <p style={{ color: theme.textMuted, fontSize: 14 }}>Loading your dashboard...</p>
       </div>
@@ -149,13 +149,13 @@ const Dashboard = () => {
     userAvatar: { width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #00d4aa, #7c6af5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, flexShrink: 0, color: '#fff' },
     userName: { fontSize: 13, fontWeight: 600, color: theme.textPrimary },
     userRole: { fontSize: 11, color: theme.textMuted, marginTop: 2 },
-    main: { flex: 1, minWidth: 0, overflow: "hidden", padding: '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24 },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', animation: 'fadeIn 0.5s ease' },
-    greeting: { fontSize: 22, fontWeight: 700, color: theme.textPrimary, marginBottom: 4 },
+    main: { flex: 1, minWidth: 0, overflow: "hidden", padding: isMobile ? '60px 12px 80px' : '32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 24, maxWidth: '100%', boxSizing: 'border-box' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', animation: 'fadeIn 0.5s ease', flexWrap: 'wrap', gap: 10 },
+    greeting: { fontSize: isMobile ? 17 : 22, fontWeight: 700, color: theme.textPrimary, marginBottom: 4 },
     dateText: { fontSize: 13, color: theme.textMuted },
     headerRight: { display: 'flex', alignItems: 'center', gap: 12 },
-    clockContainer: { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 12, padding: '10px 18px' },
-    clock: { fontSize: 20, fontWeight: 700, color: theme.accent, fontVariantNumeric: 'tabular-nums', letterSpacing: 1 },
+    clockContainer: { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 12, padding: isMobile ? '6px 10px' : '10px 18px' },
+    clock: { fontSize: isMobile ? 14 : 20, fontWeight: 700, color: theme.accent, fontVariantNumeric: 'tabular-nums', letterSpacing: 1 },
     // Theme toggle button
     toggleBtn: {
       background: theme.toggleBg,
@@ -173,11 +173,11 @@ const Dashboard = () => {
       flexShrink: 0,
     },
     statsGrid: { display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 16, animation: 'fadeIn 0.6s ease' },
-    statCard: { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 16, padding: '20px', position: 'relative', overflow: 'hidden' },
+    statCard: { background: theme.cardBg, border: `1px solid ${theme.border}`, borderRadius: 16, padding: isMobile ? '14px' : '20px', position: 'relative', overflow: 'hidden', minWidth: 0 },
     statTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
     statIcon: { fontSize: 22 },
     statDot: { width: 8, height: 8, borderRadius: '50%' },
-    statValue: { fontSize: 28, fontWeight: 800, letterSpacing: '-1px', marginBottom: 4 },
+    statValue: { fontSize: isMobile ? 22 : 28, fontWeight: 800, letterSpacing: '-1px', marginBottom: 4 },
     statLabel: { fontSize: 12, color: theme.textSecondary, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' },
     statSub: { fontSize: 11, color: theme.textMuted, marginTop: 4 },
     bottomGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 16, animation: 'fadeIn 0.7s ease' },
@@ -363,7 +363,7 @@ const Dashboard = () => {
 
         {/* ── DAILY FEEDBACK FROM ADMIN ──────────────────────── */}
         {dailyFeedbacks.length > 0 && (
-          <div style={{ padding: '0 24px 24px', maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ padding: isMobile ? 0 : '0 0 24px', maxWidth: 900, width: '100%', boxSizing: 'border-box' }}>
             <div style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)', borderRadius: 16, padding: 20, border: '1px solid #2a2a4a' }}>
               <div style={{ fontWeight: 700, fontSize: 16, color: '#e0e0e0', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                 ⭐ Daily Feedback from Admin
@@ -387,7 +387,7 @@ const Dashboard = () => {
 
         {/* ── AVAILABLE COURSES (shown when not enrolled OR always) ─── */}
         {availableCourses.filter(c => c._id !== resolvedCourseId).length > 0 && !resolvedCourseId && (
-          <div style={{ padding: '0 24px 24px', maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ padding: isMobile ? 0 : '0 0 24px', maxWidth: 900, width: '100%', boxSizing: 'border-box' }}>
             <div style={{ background: theme.cardBg, borderRadius: 16, padding: 20, border: `1px solid ${theme.border}` }}>
               <div style={{ fontWeight: 700, fontSize: 16, color: theme.textPrimary, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
                 📚 Available Courses

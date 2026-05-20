@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -18,20 +18,62 @@ import WeeklyReportPage from './pages/WeeklyReportPage';
 import GroupChatPage from './pages/GroupChatPage';
 import MyCourse from './pages/MyCourse';
 
-// ── Role-based Install Banner ─────────────────────────────────
+// ── Error Boundary ─────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('App crash caught by ErrorBoundary:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100vh', background: '#0a0d14',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontFamily: 'system-ui, sans-serif',
+          padding: 24, textAlign: 'center'
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <h2 style={{ color: '#f55555', marginBottom: 8 }}>Something went wrong</h2>
+          <p style={{ color: '#94a3b8', marginBottom: 24, fontSize: 14 }}>
+            {this.state.error?.message || 'Unknown error'}
+          </p>
+          <button
+            onClick={() => { this.setState({ hasError: false }); window.location.hash = '#/student/login'; }}
+            style={{
+              background: '#00d4aa', color: '#000', border: 'none',
+              borderRadius: 10, padding: '12px 28px',
+              fontSize: 15, fontWeight: 700, cursor: 'pointer'
+            }}
+          >
+            Go to Login
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ── Install Banner ─────────────────────────────────────────────
 function InstallBanner() {
   const { user } = useAuth();
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showBanner, setShowBanner]       = useState(false);
   const [dismissed, setDismissed]         = useState(false);
 
-  // Already running as installed PWA?
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
 
   useEffect(() => {
     if (isStandalone || dismissed) return;
-
     const handler = (e) => {
       e.preventDefault();
       setInstallPrompt(e);
@@ -52,12 +94,11 @@ function InstallBanner() {
 
   if (isStandalone || !showBanner || dismissed || !user) return null;
 
-  // Role బట్టి color & label
   const roleConfig = {
-    student:  { color: '#00d4aa', label: 'Trainee',  icon: '🎓', appUrl: '/app/student/' },
-    trainer:  { color: '#8b5cf6', label: 'Trainer',  icon: '👨‍💻', appUrl: '/app/trainer/' },
-    teacher:  { color: '#8b5cf6', label: 'Trainer',  icon: '👨‍💻', appUrl: '/app/trainer/' },
-    admin:    { color: '#ef4444', label: 'Admin',    icon: '👑', appUrl: '/app/admin/'   },
+    student:  { color: '#00d4aa', label: 'Trainee',  icon: '🎓' },
+    trainer:  { color: '#8b5cf6', label: 'Trainer',  icon: '👨‍💻' },
+    teacher:  { color: '#8b5cf6', label: 'Trainer',  icon: '👨‍💻' },
+    admin:    { color: '#ef4444', label: 'Admin',    icon: '👑' },
   };
   const cfg = roleConfig[user?.role] || roleConfig.student;
 
@@ -75,12 +116,8 @@ function InstallBanner() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ fontSize: 30 }}>{cfg.icon}</span>
         <div>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>
-            Install LMS {cfg.label} App
-          </div>
-          <div style={{ fontSize: 12, opacity: 0.9 }}>
-            Use on Phone/Laptop as an App
-          </div>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>Install LMS {cfg.label} App</div>
+          <div style={{ fontSize: 12, opacity: 0.9 }}>Use on Phone/Laptop as an App</div>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
@@ -100,30 +137,54 @@ function InstallBanner() {
   );
 }
 
-// ── Private Route guard ───────────────────────────────────────
+// ── Private Route guard ────────────────────────────────────────
+// FIX: Wait for isLoading before redirecting — prevents race condition
+// that caused Tasks tab → Login page redirect on app load.
 const PrivateRoute = ({ children, roles }) => {
-  const { token, user } = useAuth();
+  const { token, user, isLoading } = useAuth();
+
+  // Still reading localStorage / verifying token — show spinner, NOT redirect
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        minHeight: '100vh', background: '#0a0d14',
+      }}>
+        <div style={{
+          width: 36, height: 36,
+          border: '3px solid #2a2a3e',
+          borderTop: '3px solid #00d4aa',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+      </div>
+    );
+  }
+
   if (!token) {
-    const path = window.location.pathname;
-    if (path.startsWith('/admin'))   return <Navigate to="/admin/login" />;
-    if (path.startsWith('/trainer')) return <Navigate to="/trainer/login" />;
+    const path = window.location.hash || window.location.pathname;
+    if (path.includes('/admin'))   return <Navigate to="/admin/login" />;
+    if (path.includes('/trainer')) return <Navigate to="/trainer/login" />;
     return <Navigate to="/student/login" />;
   }
+
   if (roles && user && !roles.includes(user.role)) {
     if (user.role === 'admin')                              return <Navigate to="/admin" />;
     if (user.role === 'teacher' || user.role === 'trainer') return <Navigate to="/trainer" />;
     return <Navigate to="/dashboard" />;
   }
+
   return children;
 };
 
 // ── App ───────────────────────────────────────────────────────
 export default function App() {
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <ThemeProvider>
         <ToastProvider>
-          <BrowserRouter>
+          <HashRouter>
             <InstallBanner />
             <Routes>
               {/* Login pages */}
@@ -156,9 +217,10 @@ export default function App() {
 
               <Route path="*" element={<Navigate to="/student/login" />} />
             </Routes>
-          </BrowserRouter>
+          </HashRouter>
         </ToastProvider>
       </ThemeProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }

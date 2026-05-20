@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
+import { API_BASE } from '../api';
 
-const SOCKET_URL = 'http://localhost:5000';
 let socketInstance = null;
 
 export const useSocket = (userId) => {
@@ -10,41 +10,43 @@ export const useSocket = (userId) => {
   useEffect(() => {
     if (!userId) return;
 
-    // Reuse single instance
-    if (!socketInstance || !socketInstance.connected) {
-      socketInstance = io(SOCKET_URL, {
-        transports: ['websocket'],
-        autoConnect: true,
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
-      });
+    try {
+      if (!socketInstance || !socketInstance.connected) {
+        socketInstance = io(API_BASE, {
+          transports: ['websocket'],
+          autoConnect: true,
+          reconnection: true,
+          reconnectionDelay: 2000,
+          reconnectionAttempts: 3,
+          timeout: 10000,
+        });
+
+        socketInstance.on('connect_error', (err) => {
+          console.warn('Socket connect error (non-fatal):', err.message);
+        });
+      }
+
+      socketRef.current = socketInstance;
+      socketInstance.emit('join-user', userId);
+    } catch (e) {
+      console.warn('Socket init failed (non-fatal):', e.message);
     }
 
-    socketRef.current = socketInstance;
-    socketInstance.emit('join-user', userId);
-
     return () => {
-      // Don't disconnect on unmount — let it persist across pages
+      // Don't disconnect — persist across pages
     };
   }, [userId]);
 
   const on = useCallback((event, handler) => {
-    if (socketRef.current) {
-      socketRef.current.on(event, handler);
-    }
+    try { socketRef.current?.on(event, handler); } catch(e) {}
   }, []);
 
   const off = useCallback((event, handler) => {
-    if (socketRef.current) {
-      socketRef.current.off(event, handler);
-    }
+    try { socketRef.current?.off(event, handler); } catch(e) {}
   }, []);
 
   const emit = useCallback((event, data) => {
-    if (socketRef.current) {
-      socketRef.current.emit(event, data);
-    }
+    try { socketRef.current?.emit(event, data); } catch(e) {}
   }, []);
 
   return { on, off, emit, socket: socketRef.current };

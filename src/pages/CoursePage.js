@@ -5,13 +5,14 @@ import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
-const API = process.env.REACT_APP_API_URL || "";
+const API = 'https://codemedha-production-47c1.up.railway.app';
 export default function CoursePage() {
   const { user, token } = useAuth();
   const { isDark, toggleTheme, theme } = useTheme();
   const navigate  = useNavigate();
   const headers   = { Authorization: `Bearer ${token}` };
   const videoRef  = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const [dailyClass,  setDailyClass]  = useState(null);
   const [loading,     setLoading]     = useState(true);
@@ -29,6 +30,12 @@ export default function CoursePage() {
   const todayStr = new Date().toISOString().split('T')[0];
 
   // Auto-fetch enrolledCourse if missing
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   useEffect(() => {
     if (!courseId && user?._id) {
       api.get(`${API}/api/courses/${user._id}`, { headers: { Authorization: `Bearer ${token}` } })
@@ -209,12 +216,12 @@ export default function CoursePage() {
   ];
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: theme.pageBg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: theme.pageBg, fontFamily: "'DM Sans', 'Segoe UI', sans-serif", overflowX: 'hidden' }}>
       <Sidebar activePath="/courses" courseId={user&&user.enrolledCourse} />
       {/* Main */}
-      <div style={{ flex: 1, minWidth: 0, overflow: "hidden", display: 'flex', flexDirection: 'column', padding: 24, overflow: 'auto', background: theme.pageBg }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', padding: isMobile ? '60px 12px 80px' : '24px', overflowY: 'auto', overflowX: 'hidden', background: theme.pageBg, boxSizing: 'border-box' }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? 8 : 0 }}>
           <h2 style={{ color: theme.textPrimary, fontSize: 22, fontWeight: 700, margin: 0 }}>📺 Today's Class</h2>
           <button
             onClick={() => navigate('/my-course')}
